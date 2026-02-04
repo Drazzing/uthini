@@ -23,7 +23,17 @@ No PHP mail, no Composer, no server config.
 
 ## Option 2: PHPMailer on GoDaddy (use your PHP script)
 
-The script **already uses PHPMailer** when it finds `vendor/autoload.php`. You only need to install it on the server.
+The script uses PHPMailer when it finds **vendor/autoload.php** (Composer) or a **phpmailer/src/** folder (manual install). You only need one.
+
+### Option 2a: Manual install (no Composer – recommended)
+
+1. Download PHPMailer from [github.com/PHPMailer/PHPMailer/releases](https://github.com/PHPMailer/PHPMailer/releases) (Source code zip).
+2. Unzip and copy the **src** folder from inside the PHPMailer folder into your project’s **phpmailer** folder so you have **phpmailer/src/PHPMailer.php**, **Exception.php**, **SMTP.php** (see **phpmailer/README.md** in this repo).
+3. Upload the **phpmailer** folder (with src and all files) to your server in the **same directory** as contact-form.php.
+4. In **contact-form.php** set `$from_email = 'info@uthini.com';` (or another @uthini.com address from GoDaddy Workspace Email).
+5. Submit a test. “mail() returned false” should stop.
+
+### Option 2b: Install via Composer
 
 ### Step 1: Install Composer and PHPMailer on the server
 

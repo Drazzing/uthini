@@ -3,16 +3,19 @@
  * Contact form handler – runs on your server.
  * Set $to and $from_email below. Your email is never published on the site.
  *
- * Sending: tries PHPMailer + GoDaddy SMTP if vendor/autoload.php exists (install with: composer require phpmailer/phpmailer). Otherwise uses PHP mail().
+ * GoDaddy: Use relay relay-hosting.secureserver.net port 25, no auth/SSL (PHPMailer does this when loaded).
+ * From address MUST be a valid email on your domain (e.g. info@uthini.com) in GoDaddy Workspace Email.
+ * Add SPF to DNS: v=spf1 include:secureserver.net -all
+ * Email body uses \r\n line endings for compatibility.
  *
- * If your error log shows "mail() returned false": PHPMailer is not installed. See CONTACT-FORM-SETUP.md for Formspree (no install) or PHPMailer install steps.
+ * Sending: tries PHPMailer + GoDaddy relay (vendor/autoload.php or phpmailer/src/). Else PHP mail().
+ * If error log shows "mail() returned false": install PHPMailer (see CONTACT-FORM-SETUP.md or phpmailer/README.md).
  *
- * Logging: submissions and errors go to contact-log.txt (same folder as script), or uthini_contact_log.txt in the system temp dir if that folder isn't writable, or to PHP error_log if both fail.
- *
+ * Logging: contact-log.txt, or temp dir, or PHP error_log.
  * Security: sanitization, rate limiting, honeypot, length limits.
  */
 $to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com';
-$from_email = 'shawn.rosewarne@gmail.com'; // Prefer @uthini.com on GoDaddy
+$from_email = 'shawn.rosewarne@gmail.com'; // MUST be valid @uthini.com on GoDaddy for relay
 $from_name = 'Uthini Contact';
 
 $contact_log_file = __DIR__ . '/contact-log.txt';
@@ -20,14 +23,15 @@ $contact_log_fallback = sys_get_temp_dir() . '/uthini_contact_log.txt';
 
 function uthini_contact_log($message, $log_file, $fallback_file = '') {
   $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
-  if ($log_file && @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX) !== false) {
-    return;
-  }
-  if ($fallback_file && @file_put_contents($fallback_file, $line, FILE_APPEND | LOCK_EX) !== false) {
-    return;
-  }
+  $prefixed = 'Uthini contact: ' . trim($message);
   if (function_exists('error_log')) {
-    error_log('Uthini contact: ' . trim($message));
+    error_log($prefixed);
+  }
+  if ($log_file) {
+    @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
+  }
+  if ($fallback_file) {
+    @file_put_contents($fallback_file, $line, FILE_APPEND | LOCK_EX);
   }
 }
 
@@ -78,7 +82,7 @@ if (!$ok) {
   uthini_contact_log("VALIDATION_FAILED $reason ip=$ip email=" . substr($email, 0, 50), $contact_log_file, $contact_log_fallback);
 } else {
   $subject_line = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
-  $body = "Name: $name\nEmail: $email\n\nMessage:\n$message";
+  $body = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
 
   $sent = false;
   $phpmailer_loaded = false;
@@ -90,6 +94,19 @@ if (!$ok) {
       uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
       if (function_exists('error_log')) {
         error_log('Uthini contact: PHPMailer autoload failed: ' . $e->getMessage());
+      }
+    }
+  }
+  if (!$phpmailer_loaded && is_file(__DIR__ . '/phpmailer/src/PHPMailer.php')) {
+    try {
+      require_once __DIR__ . '/phpmailer/src/Exception.php';
+      require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
+      require_once __DIR__ . '/phpmailer/src/SMTP.php';
+      $phpmailer_loaded = true;
+    } catch (Throwable $e) {
+      uthini_contact_log("ERROR phpmailer_manual " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
+      if (function_exists('error_log')) {
+        error_log('Uthini contact: PHPMailer manual load failed: ' . $e->getMessage());
       }
     }
   }
