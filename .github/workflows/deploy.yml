@@ -16,17 +16,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare deploy folder
+        run: |
+          mkdir -p deploy
+          cp -r css js images deploy/
+          cp *.html *.php *.xml *.txt deploy/ 2>/dev/null || true
+          ls -la deploy/
+
       - name: Deploy to GoDaddy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /httpdocs/
-          exclude: |
-            **/.git
-            **/.gitignore
-            **/.github
-            **/uthini.com
-            **/README.md
-            **/branding/
+          local-dir: ./deploy/
+          server-dir: /
