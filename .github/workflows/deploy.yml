@@ -1,5 +1,5 @@
 # Deploy to GoDaddy via FTP when you push to main.
-# Add these repository secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+# Add repository secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD (Settings → Secrets and variables → Actions).
 # See README for setup.
 
 name: Deploy to GoDaddy
