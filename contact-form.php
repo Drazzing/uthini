@@ -261,7 +261,35 @@ if (!contact_safe_header_value($name) || !contact_safe_header_value($email)) {
 global $contact_to, $contact_from_email, $contact_from_name;
 
 $subjectLine = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
-$body        = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
+$bodyPlain   = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
+
+$nameEsc    = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+$emailEsc   = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+$subjectEsc = htmlspecialchars($subject !== '' ? $subject : 'Enquiry', ENT_QUOTES, 'UTF-8');
+$messageEsc = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+$messageBr  = nl2br($messageEsc, false);
+
+$bodyHtml = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact form submission</title>
+</head>
+<body style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; color: #1a1a1a; max-width: 36rem; margin: 0 auto; padding: 1.5rem;">
+  <h2 style="margin: 0 0 1rem; font-size: 1.25rem; color: #8503B0;">New contact form message</h2>
+  <table style="width: 100%; border-collapse: collapse;">
+    <tr><td style="padding: 0.35rem 0.5rem 0.35rem 0; font-weight: 600; color: #555;">Name</td><td style="padding: 0.35rem 0;">{$nameEsc}</td></tr>
+    <tr><td style="padding: 0.35rem 0.5rem 0.35rem 0; font-weight: 600; color: #555;">Email</td><td style="padding: 0.35rem 0;"><a href="mailto:{$emailEsc}" style="color: #8503B0;">{$emailEsc}</a></td></tr>
+    <tr><td style="padding: 0.35rem 0.5rem 0.35rem 0; font-weight: 600; color: #555;">Subject</td><td style="padding: 0.35rem 0;">{$subjectEsc}</td></tr>
+  </table>
+  <p style="margin: 1rem 0 0; font-weight: 600; color: #555;">Message</p>
+  <div style="margin-top: 0.35rem; padding: 0.75rem; background: #f5f5f5; border-radius: 0.25rem; border-left: 3px solid #8503B0;">{$messageBr}</div>
+  <p style="margin-top: 1.5rem; font-size: 0.875rem; color: #888;">Sent via Uthini Solutions contact form.</p>
+</body>
+</html>
+HTML;
 
 $sent           = false;
 $sendFailReason = '';
@@ -303,7 +331,9 @@ if ($phpmailerLoaded && class_exists('PHPMailer\PHPMailer\PHPMailer')) {
       }
     }
     $mail->Subject = $subjectLine;
-    $mail->Body    = $body;
+    $mail->isHTML(true);
+    $mail->Body    = $bodyHtml;
+    $mail->AltBody = $bodyPlain;
     $mail->CharSet = 'UTF-8';
     $mail->Encoding = 'base64';
     $sent = $mail->send();
@@ -318,7 +348,7 @@ if (!$sent) {
     . "Reply-To: " . $email . "\r\n"
     . "Content-Type: text/plain; charset=UTF-8\r\n"
     . "X-Mailer: PHP/" . PHP_VERSION;
-  $sent = @mail($contact_to, $subjectLine, $body, $headers);
+  $sent = @mail($contact_to, $subjectLine, $bodyPlain, $headers);
   if (!$sent) {
     $sendFailReason = 'mail() returned false';
   }
