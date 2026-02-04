@@ -566,25 +566,45 @@ main {
   background-repeat: no-repeat;
   color: var(--color-surface);
   overflow: hidden;
+  border-radius: 0 0 2rem 2rem;
+  box-shadow:
+    0 4px 20px rgba(133, 3, 176, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 8px 32px rgba(0, 0, 0, 0.15);
 }
 .hero::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(145deg, rgba(92, 3, 144, 0.75) 0%, rgba(133, 3, 176, 0.6) 40%, rgba(13, 122, 138, 0.5) 100%);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 120%, transparent 40%, rgba(0, 0, 0, 0.25) 100%),
+    linear-gradient(145deg, rgba(92, 3, 144, 0.78) 0%, rgba(133, 3, 176, 0.65) 40%, rgba(13, 122, 138, 0.55) 100%);
   z-index: 0;
+  border-radius: 0 0 2rem 2rem;
 }
 .hero::after {
   content: "";
   position: absolute;
   bottom: -20%;
   right: -10%;
-  width: 50%;
-  max-width: 24rem;
-  height: 80%;
-  background: radial-gradient(ellipse, rgba(115, 236, 255, 0.12) 0%, transparent 70%);
+  width: 55%;
+  max-width: 28rem;
+  height: 85%;
+  background: radial-gradient(ellipse, rgba(115, 236, 255, 0.18) 0%, transparent 65%);
   z-index: 0;
   pointer-events: none;
+}
+.hero__accent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-highlight), var(--color-highlight-alt), var(--color-primary));
+  z-index: 1;
+  border-radius: 0 0 2rem 2rem;
+  box-shadow: 0 -2px 12px rgba(115, 236, 255, 0.4);
 }
 .hero__logo-wrap {
   position: relative;
@@ -620,10 +640,14 @@ main {
   animation: heroFadeIn 0.7s var(--ease-out) 0.65s both;
   background: var(--color-highlight);
   color: var(--color-primary);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 .hero .hero__cta:hover {
   background: var(--color-surface);
   color: var(--color-primary);
+  border-color: var(--color-surface);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
 }
 @keyframes heroFadeIn {
   from {

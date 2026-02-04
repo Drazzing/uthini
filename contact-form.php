@@ -5,7 +5,9 @@
  *
  * Sending: tries PHPMailer + GoDaddy SMTP if vendor/autoload.php exists (install with: composer require phpmailer/phpmailer). Otherwise uses PHP mail().
  *
- * Logging: submissions and errors are appended to contact-log.txt in the same folder as this script.
+ * If your error log shows "mail() returned false": PHPMailer is not installed. See CONTACT-FORM-SETUP.md for Formspree (no install) or PHPMailer install steps.
+ *
+ * Logging: submissions and errors go to contact-log.txt (same folder as script), or uthini_contact_log.txt in the system temp dir if that folder isn't writable, or to PHP error_log if both fail.
  *
  * Security: sanitization, rate limiting, honeypot, length limits.
  */
@@ -14,13 +16,19 @@ $from_email = 'shawn.rosewarne@gmail.com'; // Prefer @uthini.com on GoDaddy
 $from_name = 'Uthini Contact';
 
 $contact_log_file = __DIR__ . '/contact-log.txt';
+$contact_log_fallback = sys_get_temp_dir() . '/uthini_contact_log.txt';
 
-function uthini_contact_log($message, $log_file) {
-  if (!$log_file) {
+function uthini_contact_log($message, $log_file, $fallback_file = '') {
+  $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+  if ($log_file && @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX) !== false) {
     return;
   }
-  $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
-  @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
+  if ($fallback_file && @file_put_contents($fallback_file, $line, FILE_APPEND | LOCK_EX) !== false) {
+    return;
+  }
+  if (function_exists('error_log')) {
+    error_log('Uthini contact: ' . trim($message));
+  }
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -41,13 +49,13 @@ if (is_file($rate_limit_file)) {
   });
 }
 if (count($timestamps) >= $rate_limit_max) {
-  uthini_contact_log("BLOCKED rate_limit ip=$ip", $contact_log_file);
+  uthini_contact_log("BLOCKED rate_limit ip=$ip", $contact_log_file, $contact_log_fallback);
   header('Location: /contact.html?thanks=0');
   exit;
 }
 
 if (isset($_POST['website']) && trim((string) $_POST['website']) !== '') {
-  uthini_contact_log("BLOCKED honeypot ip=$ip", $contact_log_file);
+  uthini_contact_log("BLOCKED honeypot ip=$ip", $contact_log_file, $contact_log_fallback);
   header('Location: /contact.html?thanks=0');
   exit;
 }
@@ -67,7 +75,7 @@ $ok = $name !== '' && $email !== '' && $message !== '' && filter_var($email, FIL
 
 if (!$ok) {
   $reason = !$name ? 'name_empty' : (!$email ? 'email_empty' : (!$message ? 'message_empty' : 'email_invalid'));
-  uthini_contact_log("VALIDATION_FAILED $reason ip=$ip email=" . substr($email, 0, 50), $contact_log_file);
+  uthini_contact_log("VALIDATION_FAILED $reason ip=$ip email=" . substr($email, 0, 50), $contact_log_file, $contact_log_fallback);
 } else {
   $subject_line = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
   $body = "Name: $name\nEmail: $email\n\nMessage:\n$message";
@@ -79,7 +87,7 @@ if (!$ok) {
       require_once __DIR__ . '/vendor/autoload.php';
       $phpmailer_loaded = true;
     } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file);
+      uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
       if (function_exists('error_log')) {
         error_log('Uthini contact: PHPMailer autoload failed: ' . $e->getMessage());
       }
@@ -107,7 +115,7 @@ if (!$ok) {
       $mail->Encoding = 'base64';
       $sent = $mail->send();
     } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_send " . $e->getMessage(), $contact_log_file);
+      uthini_contact_log("ERROR phpmailer_send " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
       if (function_exists('error_log')) {
         error_log('Uthini contact: PHPMailer send failed: ' . $e->getMessage());
       }
@@ -118,7 +126,7 @@ if (!$ok) {
     $headers = "From: $from_name <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
     $sent = @mail($to, $subject_line, $body, $headers);
     if (!$sent) {
-      uthini_contact_log("ERROR mail_failed To=$to From=$from_email", $contact_log_file);
+      uthini_contact_log("ERROR mail_failed To=$to From=$from_email", $contact_log_file, $contact_log_fallback);
       if (function_exists('error_log')) {
         error_log('Uthini contact form: mail() returned false. To=' . $to . ' From=' . $from_email);
       }
@@ -128,7 +136,7 @@ if (!$ok) {
   $log_subject = str_replace(["\t", "\n", "\r"], ' ', $subject);
   $log_subject = mb_substr($log_subject, 0, 60, 'UTF-8');
   $status = $sent ? 'sent' : 'send_failed';
-  uthini_contact_log("SUBMIT $status name=" . $name . " email=" . $email . " subject=" . $log_subject . " ip=$ip", $contact_log_file);
+  uthini_contact_log("SUBMIT $status name=" . $name . " email=" . $email . " subject=" . $log_subject . " ip=$ip", $contact_log_file, $contact_log_fallback);
 
   $timestamps[] = $now;
   @file_put_contents($rate_limit_file, implode("\n", $timestamps));
