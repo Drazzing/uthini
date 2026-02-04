@@ -1,12 +1,9 @@
 <?php
 /**
- * Contact form – basic handler for GoDaddy Windows Hosting.
+ * Contact form – GoDaddy Windows Hosting.
  *
- * PHPMailer wiki: Windows Hosting use localhost (not relay hostname), port 25, no auth, SMTPAutoTLS false.
- * https://github.com/phpmailer/phpmailer/wiki/Troubleshooting#godaddy
- *
- * From address must be a valid email on your domain (e.g. noreply@uthini123.com).
- * Set $to and $from_email below. Install PHPMailer (Composer or phpmailer/src/).
+ * PHPMailer: uses GoDaddy relay (relay-hosting.secureserver.net, port 25, no auth).
+ * From address must be a valid email on your domain. Install PHPMailer (Composer or phpmailer/src/).
  */
 $to         = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com';
 $from_email = 'noreply@uthini123.com';
