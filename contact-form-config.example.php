@@ -11,7 +11,8 @@ $contact_to           = 'you@example.com';
 $contact_from_email   = 'noreply@yourdomain.com';
 $contact_from_name    = 'Site Contact';
 
-// MySQL – table contact_log is created automatically if missing
+// MS SQL Server – run contact_log.sql once to create the table
+$contact_db_driver = 'sqlsrv';
 $contact_db_host = 'P3NWPLSK12SQL-v11.shr.prod.phx3.secureserver.net';
 $contact_db_name = 'Drazzing123_';
 $contact_db_user = 'uthini';

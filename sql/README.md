@@ -1,25 +1,22 @@
 # Contact form – database logging
 
-Contact form events are written to MySQL instead of a log file.
+Contact form events are written to the **contact_log** table. Create the table once manually (script does not create it).
 
-The script tries to create the **contact_log** table automatically (CREATE TABLE IF NOT EXISTS) before each insert.
+## Windows hosting (GoDaddy Plesk)
 
-**If the table was not created** (e.g. no rows in contact_log after sending the form): your database user may not have CREATE TABLE permission (common on GoDaddy). Create the table once manually:
+GoDaddy Windows hosting can use **SQL Server** or **MySQL**. Choose one:
 
-1. In **Plesk → Databases → phpMyAdmin** (or your host’s MySQL tool), open the database (e.g. `Drazzing123_`).
-2. Run the SQL in **contact_log.sql** (copy and paste, then Execute).
+| Database   | Script to run        | In contact-form-config.php   |
+|-----------|----------------------|------------------------------|
+| SQL Server | **contact_log.sql** (repo root) | `$contact_db_driver = 'sqlsrv'` |
+| MySQL      | **contact_log_mysql.sql**       | `$contact_db_driver = 'mysql'`  |
 
-After that, the form will insert rows into the existing table.
+- **SQL Server:** Open in SSMS or your SQL Server tool, select database (e.g. `Drazzing123_`), run the script. PHP needs the **pdo_sqlsrv** extension (Microsoft Drivers for PHP for SQL Server).
+- **MySQL:** In **Plesk → Databases → phpMyAdmin**, select database, SQL tab, paste and run **contact_log_mysql.sql**.
 
-## Set the password in contact-form-config.php
+## Set config in contact-form-config.php
 
-In `contact-form.php` at the top, set your database password:
-
-```php
-$db_pass = 'YOUR_ACTUAL_PASSWORD';
-```
-
-Keep `$db_host`, `$db_name`, and `$db_user` as they are (or change if your host/database name differs).
+Set `$contact_db_pass` and, for Windows hosting, `$contact_db_driver` (`'sqlsrv'` or `'mysql'`). Keep `$contact_db_host`, `$contact_db_name`, `$contact_db_user` as needed.
 
 ## Table: contact_log
 
