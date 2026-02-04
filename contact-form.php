@@ -121,12 +121,12 @@ function contact_db(): ?PDO {
 }
 
 /**
- * Create contact_log table if it does not exist.
+ * Create contact_log table if it does not exist. Once per request.
  */
-function contact_ensure_table(PDO $pdo): void {
+function contact_ensure_table(PDO $pdo): bool {
   static $done = false;
   if ($done) {
-    return;
+    return true;
   }
   $sql = "CREATE TABLE IF NOT EXISTS contact_log (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -146,10 +146,12 @@ function contact_ensure_table(PDO $pdo): void {
   try {
     $pdo->exec($sql);
     $done = true;
+    return true;
   } catch (PDOException $e) {
     if (function_exists('error_log')) {
       error_log('Uthini contact: create table failed: ' . $e->getMessage());
     }
+    return false;
   }
 }
 
@@ -164,7 +166,9 @@ function contact_log_db(array $data): void {
     }
     return;
   }
-  contact_ensure_table($pdo);
+  if (!contact_ensure_table($pdo)) {
+    return;
+  }
   $defaults = [
     'status'       => '',
     'detail'       => null,
@@ -198,8 +202,29 @@ function contact_log_db(array $data): void {
       'error_reason' => $row['error_reason'],
     ]);
   } catch (PDOException $e) {
+    $msg = $e->getMessage();
     if (function_exists('error_log')) {
-      error_log('Uthini contact: DB insert failed: ' . $e->getMessage());
+      error_log('Uthini contact: DB insert failed: ' . $msg);
+    }
+    if (strpos($msg, "doesn't exist") !== false || (int) $e->getCode() === 1146) {
+      contact_ensure_table($pdo);
+      try {
+        $stmt = $pdo->prepare('INSERT INTO contact_log (status, detail, name, email, subject, message, ip, error_reason) VALUES (:status, :detail, :name, :email, :subject, :message, :ip, :error_reason)');
+        $stmt->execute([
+          'status'       => $row['status'],
+          'detail'       => $row['detail'],
+          'name'         => $row['name'],
+          'email'        => $row['email'],
+          'subject'      => $row['subject'],
+          'message'      => $row['message'],
+          'ip'           => $row['ip'],
+          'error_reason' => $row['error_reason'],
+        ]);
+      } catch (PDOException $e2) {
+        if (function_exists('error_log')) {
+          error_log('Uthini contact: DB insert retry failed: ' . $e2->getMessage());
+        }
+      }
     }
   }
 }
@@ -291,10 +316,25 @@ $bodyHtml = <<<HTML
 </html>
 HTML;
 
+// Redirect immediately so user sees thank-you page without waiting for email/DB
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
+header('Location: ' . CONTACT_REDIRECT_PATH . '?thanks=1', true, 303);
+header('Content-Length: 0');
+if (function_exists('fastcgi_finish_request')) {
+  fastcgi_finish_request();
+} else {
+  if (ob_get_level()) {
+    ob_end_flush();
+  }
+  flush();
+}
+ignore_user_abort(true);
+
+// Send email and log in background (user already redirected)
 $sent           = false;
 $sendFailReason = '';
 
-// Try PHPMailer
 $phpmailerLoaded = false;
 if (is_file(__DIR__ . '/vendor/autoload.php')) {
   try {
@@ -370,5 +410,4 @@ contact_log_db([
 
 $timestamps[] = $now;
 @file_put_contents($rateFile, implode("\n", $timestamps));
-
-contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=1');
+exit;
