@@ -3,10 +3,10 @@
  * Contact form handler – runs on your server.
  * Set $to and $from_email below. Your email is never published on the site.
  *
- * Uses PHP mail() only. Per GoDaddy: "If you use a PHP script and the mail() function,
- * you do not need to specify a relay server." The server handles delivery.
+ * Sending: PHPMailer first (if loaded) with GoDaddy config from PHPMailer wiki:
+ * Host=localhost, Port=25, SMTPAuth=false, SMTPAutoTLS=false. Then PHP mail() fallback.
  * From = email on your domain. SPF: v=spf1 include:secureserver.net -all
- * https://www.godaddy.com/help/send-form-mail-using-an-smtp-relay-server-953
+ * https://github.com/phpmailer/phpmailer/wiki/Troubleshooting (GoDaddy)
  *
  * Logging: contact-log.txt. Security: rate limit, honeypot.
  */
@@ -80,15 +80,62 @@ if (!$ok) {
   $subject_line = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
   $body = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
 
+  $sent = false;
   $send_fail_reason = '';
-  @ini_set('sendmail_from', $from_email);
-  $headers = "From: $from_name <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
-  $sent = @mail($to, $subject_line, $body, $headers);
+  $phpmailer_loaded = false;
+
+  if (is_file(__DIR__ . '/vendor/autoload.php')) {
+    try {
+      require_once __DIR__ . '/vendor/autoload.php';
+      $phpmailer_loaded = true;
+    } catch (Throwable $e) {
+      uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
+    }
+  }
+  if (!$phpmailer_loaded && is_file(__DIR__ . '/phpmailer/src/PHPMailer.php')) {
+    try {
+      require_once __DIR__ . '/phpmailer/src/Exception.php';
+      require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
+      require_once __DIR__ . '/phpmailer/src/SMTP.php';
+      $phpmailer_loaded = true;
+    } catch (Throwable $e) {
+      uthini_contact_log("ERROR phpmailer_manual " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
+    }
+  }
+
+  if ($phpmailer_loaded && class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+    try {
+      $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+      $mail->isSMTP();
+      $mail->Host = 'localhost';
+      $mail->Port = 25;
+      $mail->SMTPAuth = false;
+      $mail->SMTPAutoTLS = false;
+      $mail->setFrom($from_email, $from_name);
+      $mail->addReplyTo($email, $name);
+      foreach (array_map('trim', explode(',', $to)) as $addr) {
+        if ($addr !== '') {
+          $mail->addAddress($addr);
+        }
+      }
+      $mail->Subject = $subject_line;
+      $mail->Body = $body;
+      $mail->CharSet = 'UTF-8';
+      $mail->Encoding = 'base64';
+      $sent = $mail->send();
+    } catch (Throwable $e) {
+      $send_fail_reason = 'phpmailer_send: ' . $e->getMessage();
+      uthini_contact_log("ERROR " . $send_fail_reason, $contact_log_file, $contact_log_fallback);
+    }
+  }
+
   if (!$sent) {
-    $send_fail_reason = 'mail() returned false';
-    uthini_contact_log("ERROR mail_failed To=$to From=$from_email", $contact_log_file, $contact_log_fallback);
-    if (function_exists('error_log')) {
-      error_log('Uthini contact form: mail() returned false. To=' . $to . ' From=' . $from_email);
+    @ini_set('sendmail_from', $from_email);
+    $headers = "From: $from_name <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
+    $sent = @mail($to, $subject_line, $body, $headers);
+    if (!$sent) {
+      $send_fail_reason = 'mail() returned false';
+      uthini_contact_log("ERROR mail_failed To=$to From=$from_email", $contact_log_file, $contact_log_fallback);
     }
   }
 

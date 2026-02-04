@@ -1,6 +1,6 @@
 # PHPMailer – manual install (no Composer)
 
-The contact form uses PHPMailer to send via GoDaddy’s SMTP when PHP `mail()` fails. You can install it **without Composer** by putting the PHPMailer source here.
+The contact form uses PHPMailer when available (GoDaddy config: localhost, port 25, no auth, SMTPAutoTLS=false per [PHPMailer wiki](https://github.com/phpmailer/phpmailer/wiki/Troubleshooting)), then falls back to PHP `mail()`. You can install PHPMailer **without Composer** by putting the source here.
 
 ## Steps
 
@@ -31,4 +31,4 @@ The contact form uses PHPMailer to send via GoDaddy’s SMTP when PHP `mail()` f
    $from_email = 'info@uthini.com';  // or another @uthini.com address from GoDaddy Workspace Email
    ```
 
-After that, the contact form will use PHPMailer with GoDaddy’s relay instead of `mail()`, and “mail() returned false” should stop.
+After that, the form will try PHPMailer first (localhost:25, no TLS) then `mail()`. If sending still fails, check `contact-log.txt` for the `reason=` line; PHPMailer’s GoDaddy troubleshooting page may help.
