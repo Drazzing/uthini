@@ -3,7 +3,7 @@
  * Contact form handler – runs on your server.
  * Set $to and $from_email below. Your email is never published on the site.
  *
- * GoDaddy: Use relay relay-hosting.secureserver.net port 25, no auth/SSL (PHPMailer does this when loaded).
+ * GoDaddy Windows Hosting: relay relay-hosting.secureserver.net port 587 (port 25 often blocked), no auth.
  * From address MUST be a valid email on your domain (e.g. info@uthini.com) in GoDaddy Workspace Email.
  * Add SPF to DNS: v=spf1 include:secureserver.net -all
  * Email body uses \r\n line endings for compatibility.
@@ -15,7 +15,7 @@
  * Security: sanitization, rate limiting, honeypot, length limits.
  */
 $to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com';
-$from_email = 'shawn.rosewarne@gmail.com'; // MUST be valid @uthini.com on GoDaddy for relay
+$from_email = 'shawn.rosewarne@gmail.com';
 $from_name = 'Uthini Contact';
 
 $contact_log_file = __DIR__ . '/contact-log.txt';
@@ -86,39 +86,41 @@ if (!$ok) {
 
   $sent = false;
   $phpmailer_loaded = false;
-  if (is_file(__DIR__ . '/vendor/autoload.php')) {
-    try {
-      require_once __DIR__ . '/vendor/autoload.php';
-      $phpmailer_loaded = true;
-    } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
-      if (function_exists('error_log')) {
-        error_log('Uthini contact: PHPMailer autoload failed: ' . $e->getMessage());
+  if (!$sent) {
+    if (is_file(__DIR__ . '/vendor/autoload.php')) {
+      try {
+        require_once __DIR__ . '/vendor/autoload.php';
+        $phpmailer_loaded = true;
+      } catch (Throwable $e) {
+        uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
+        if (function_exists('error_log')) {
+          error_log('Uthini contact: PHPMailer autoload failed: ' . $e->getMessage());
+        }
       }
     }
-  }
-  if (!$phpmailer_loaded && is_file(__DIR__ . '/phpmailer/src/PHPMailer.php')) {
-    try {
-      require_once __DIR__ . '/phpmailer/src/Exception.php';
-      require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
-      require_once __DIR__ . '/phpmailer/src/SMTP.php';
-      $phpmailer_loaded = true;
-    } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_manual " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
-      if (function_exists('error_log')) {
-        error_log('Uthini contact: PHPMailer manual load failed: ' . $e->getMessage());
+    if (!$phpmailer_loaded && is_file(__DIR__ . '/phpmailer/src/PHPMailer.php')) {
+      try {
+        require_once __DIR__ . '/phpmailer/src/Exception.php';
+        require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
+        require_once __DIR__ . '/phpmailer/src/SMTP.php';
+        $phpmailer_loaded = true;
+      } catch (Throwable $e) {
+        uthini_contact_log("ERROR phpmailer_manual " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
+        if (function_exists('error_log')) {
+          error_log('Uthini contact: PHPMailer manual load failed: ' . $e->getMessage());
+        }
       }
     }
   }
 
-  if ($phpmailer_loaded && class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+  if (!$sent && $phpmailer_loaded && class_exists('PHPMailer\PHPMailer\PHPMailer')) {
     try {
       $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
       $mail->isSMTP();
       $mail->Host = 'relay-hosting.secureserver.net';
-      $mail->Port = 25;
+      $mail->Port = 587;
       $mail->SMTPAuth = false;
-      $mail->SMTPSecure = false;
+      $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
       $mail->setFrom($from_email, $from_name);
       $mail->addReplyTo($email, $name);
       foreach (array_map('trim', explode(',', $to)) as $addr) {

@@ -75,8 +75,8 @@ GoDaddy often blocks sending via external SMTP (e.g. Gmail’s SMTP). Use **thei
 1. Install **PHPMailer** (e.g. via Composer or a single download) on your GoDaddy account.
 2. Configure it to use **GoDaddy’s relay**:
    - **Host:** `relay-hosting.secureserver.net`
-   - **Port:** 25
-   - **Encryption:** none
+   - **Port:** 587 (recommended; port 25 is often blocked on Windows Hosting Economy)
+   - **Encryption:** STARTTLS (for port 587)
    - **Authentication:** off (for this relay)
 
 3. Send from an address on your domain (e.g. `info@uthini.com`).  
