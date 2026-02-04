@@ -25,6 +25,13 @@
   } else if (params.get("thanks") === "0") {
     if (errorEl) errorEl.hidden = false;
     if (thanksEl) thanksEl.hidden = true;
+    var reason = params.get("reason");
+    var msgEl = document.getElementById("form-error-msg");
+    if (msgEl && reason === "send") {
+      msgEl.textContent = "We couldn't send your message. Please try again later or email us directly.";
+    } else if (msgEl) {
+      msgEl.textContent = "Please check the required fields (name, email, message) and try again.";
+    }
   }
 
   if (formEl && submitBtn) {

@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!empty(trim($_POST['website'] ?? ''))) {
-  header('Location: /contact.html?thanks=0');
+  header('Location: /contact.html?thanks=0&reason=validation');
   exit;
 }
 
@@ -32,7 +32,7 @@ $message = trim(strip_tags($_POST['message'] ?? ''));
 $ok = $name !== '' && $email !== '' && $message !== '' && filter_var($email, FILTER_VALIDATE_EMAIL);
 
 if (!$ok) {
-  header('Location: /contact.html?thanks=0');
+  header('Location: /contact.html?thanks=0&reason=validation');
   exit;
 }
 
@@ -74,5 +74,9 @@ if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
   }
 }
 
-header('Location: /contact.html?thanks=' . ($sent ? '1' : '0'));
+if ($sent) {
+  header('Location: /contact.html?thanks=1');
+} else {
+  header('Location: /contact.html?thanks=0&reason=send');
+}
 exit;
