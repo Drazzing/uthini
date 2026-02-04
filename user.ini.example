@@ -1,0 +1,8 @@
+; Copy to .user.ini in your hosting directory (e.g. Plesk docroot) if you want PHP mail() to use a relay.
+; Use port 25 (not 587). Per GoDaddy: with mail() you do not need to specify a relay; the server handles delivery.
+; If you do set these, use:
+
+[PHP]
+SMTP="relay-hosting.secureserver.net"
+smtp_port=25
+sendmail_from="noreply@uthini123.com"

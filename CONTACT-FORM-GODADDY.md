@@ -4,9 +4,10 @@ Your form posts to `contact-form.php`. On GoDaddy, PHP `mail()` is often restric
 
 **Official GoDaddy guide:** [Send form mail using an SMTP relay server](https://www.godaddy.com/en-in/help/send-form-mail-using-an-smtp-relay-server-953)
 
-- **Windows Hosting (Plesk):** Host = **localhost**, port 25, no auth/SSL. With `mail()` you do not need to specify a relay.
-- **Web Hosting (cPanel):** Host = **relay-hosting.secureserver.net**, port 25, no auth/SSL.
+- **Windows Hosting (Plesk):** Host = **localhost**, **port 25**, no auth/SSL. With `mail()` you do not need to specify a relay.
+- **Web Hosting (cPanel):** Host = **relay-hosting.secureserver.net**, **port 25**, no auth/SSL.
 - **From:** Must be an email on your domain (you manage DNS). Add SPF: `v=spf1 include:secureserver.net -all`.
+- **If you set SMTP in .user.ini / php.ini:** use **smtp_port=25** (not 587).
 
 ---
 
@@ -81,8 +82,8 @@ GoDaddy often blocks sending via external SMTP (e.g. Gmail’s SMTP). Use **thei
 1. Install **PHPMailer** (e.g. via Composer or a single download) on your GoDaddy account.
 2. Configure it to use **GoDaddy’s relay**:
    - **Host:** `relay-hosting.secureserver.net`
-   - **Port:** 587 (recommended; port 25 is often blocked on Windows Hosting Economy)
-   - **Encryption:** STARTTLS (for port 587)
+   - **Port:** 25 (use 25, not 587; per GoDaddy)
+   - **Encryption:** none
    - **Authentication:** off (for this relay)
 
 3. Send from an address on your domain (e.g. `info@uthini.com`).  

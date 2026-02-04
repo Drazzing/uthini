@@ -316,11 +316,15 @@ a:hover {
 main {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-lg);
   min-height: calc(100vh - var(--header-height) - 12rem);
 }
 body.home main {
   padding-top: 0;
+}
+/* Tighter space between header and first page title (h1) on inner pages */
+main > section.section:first-child {
+  padding-block-start: var(--space-lg);
 }
 
 /* ========== Footer ========== */
