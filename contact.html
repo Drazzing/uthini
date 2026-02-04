@@ -83,7 +83,10 @@
           <label for="contact-message">Message <span class="required" aria-hidden="true">*</span></label>
           <textarea id="contact-message" name="message" required rows="5" placeholder="Tell us about your project or question."></textarea>
         </div>
-        <button type="submit" class="cta">Send message</button>
+        <button type="submit" class="cta cta--submit" id="contact-submit-btn" aria-live="polite">
+          <span class="cta__text">Send message</span>
+          <span class="cta__spinner" aria-hidden="true" hidden></span>
+        </button>
       </form>
 
       <div class="section__meta">

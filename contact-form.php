@@ -1,156 +1,344 @@
 <?php
 /**
- * Contact form handler – runs on your server.
- * Set $to and $from_email below. Your email is never published on the site.
+ * Contact form handler – secure, best-practice implementation.
  *
- * Sending: PHPMailer first (if loaded) with GoDaddy config from PHPMailer wiki:
- * Host=localhost, Port=25, SMTPAuth=false, SMTPAutoTLS=false. Then PHP mail() fallback.
- * From = email on your domain. SPF: v=spf1 include:secureserver.net -all
- * https://github.com/phpmailer/phpmailer/wiki/Troubleshooting (GoDaddy)
+ * Security: POST only, Referer check (same-origin), rate limit, honeypot,
+ * input validation/sanitization, header injection prevention, PDO prepared statements,
+ * config outside repo (contact-form-config.php), no sensitive data in responses.
  *
- * Logging: contact-log.txt. Security: rate limit, honeypot.
+ * Sending: PHPMailer with GoDaddy relay (relay-hosting.secureserver.net:25, no auth);
+ * then PHP mail() fallback. From address must be a valid email on your domain (GoDaddy).
+ * Logging: MySQL contact_log (created if not exists). Set config in contact-form-config.php.
  */
-$to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com';
-$from_email = 'noreply@uthini123.com';
-$from_name = 'Uthini Contact';
+declare(strict_types=1);
 
-$contact_log_file = __DIR__ . '/contact-log.txt';
-$contact_log_fallback = sys_get_temp_dir() . '/uthini_contact_log.txt';
+// Defaults; override in contact-form-config.php (do not commit that file).
+// GoDaddy: From must be a valid email on your domain (e.g. noreply@uthini123.com).
+$contact_to          = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com';
+$contact_from_email  = 'noreply@uthini123.com';
+$contact_from_name   = 'Uthini Contact';
+$contact_db_host     = 'P3NWPLSK12SQL-v11.shr.prod.phx3.secureserver.net';
+$contact_db_name     = 'Drazzing123_';
+$contact_db_user     = 'uthini';
+$contact_db_pass     = (function () {
+  $p = getenv('CONTACT_DB_PASS');
+  return $p !== false && $p !== '' ? $p : 'YOUR_PASSWORD';
+})();
 
-function uthini_contact_log($message, $log_file, $fallback_file = '') {
-  $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
-  $prefixed = 'Uthini contact: ' . trim($message);
-  if (function_exists('error_log')) {
-    error_log($prefixed);
+// Optional: create contact-form-config.php (gitignored) with $contact_to, $contact_from_email,
+// $contact_from_name, $contact_db_host, $contact_db_name, $contact_db_user, $contact_db_pass.
+$configFile = __DIR__ . '/contact-form-config.php';
+if (is_file($configFile)) {
+  require $configFile;
+}
+
+// Constants – single source of truth
+const CONTACT_REDIRECT_PATH = '/contact.html';
+const CONTACT_RATE_WINDOW   = 900;
+const CONTACT_RATE_MAX      = 5;
+const CONTACT_MAX_NAME      = 200;
+const CONTACT_MAX_EMAIL     = 254;
+const CONTACT_MAX_SUBJECT   = 300;
+const CONTACT_MAX_MESSAGE   = 10000;
+const CONTACT_MAX_ERROR_LEN = 500;
+const CONTACT_STATUS_BLOCKED = 'blocked';
+const CONTACT_STATUS_VALIDATION_FAILED = 'validation_failed';
+const CONTACT_STATUS_SENT   = 'sent';
+const CONTACT_STATUS_SEND_FAILED = 'send_failed';
+const CONTACT_STATUS_ERROR  = 'error';
+
+/**
+ * Safe redirect – 303 See Other, no cache, no content before headers.
+ */
+function contact_redirect(string $path, string $query = ''): void {
+  $url = $path . ($query !== '' ? '?' . $query : '');
+  header('Cache-Control: no-store, no-cache, must-revalidate');
+  header('Pragma: no-cache');
+  header('Location: ' . $url, true, 303);
+  exit;
+}
+
+/**
+ * Same-origin Referer check to reduce CSRF risk.
+ */
+function contact_referer_ok(): bool {
+  $referer = $_SERVER['HTTP_REFERER'] ?? '';
+  if ($referer === '') {
+    return true;
   }
-  if ($log_file) {
-    @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
+  $host = $_SERVER['HTTP_HOST'] ?? '';
+  if ($host === '') {
+    return true;
   }
-  if ($fallback_file) {
-    @file_put_contents($fallback_file, $line, FILE_APPEND | LOCK_EX);
+  $parsed = parse_url($referer);
+  $refHost = $parsed['host'] ?? '';
+  return strtolower($refHost) === strtolower($host);
+}
+
+/**
+ * Sanitize string: trim, strip tags, normalize whitespace, enforce max length.
+ */
+function contact_sanitize(string $value, int $maxLen = CONTACT_MAX_MESSAGE): string {
+  $value = trim($value);
+  $value = strip_tags($value);
+  $value = str_replace(["\r", "\n"], ' ', $value);
+  $value = preg_replace('/\s+/', ' ', $value);
+  return mb_substr($value, 0, $maxLen, 'UTF-8');
+}
+
+/**
+ * Check for CRLF / header injection in mail headers.
+ */
+function contact_safe_header_value(string $value): bool {
+  return strpos($value, "\r") === false && strpos($value, "\n") === false;
+}
+
+/**
+ * PDO connection (lazy). Returns null if config missing or connection fails.
+ */
+function contact_db(): ?PDO {
+  global $contact_db_host, $contact_db_name, $contact_db_user, $contact_db_pass;
+  static $pdo = null;
+  if ($pdo !== null) {
+    return $pdo;
+  }
+  if ($contact_db_pass === '' || $contact_db_pass === 'YOUR_PASSWORD') {
+    return null;
+  }
+  try {
+    $dsn = 'mysql:host=' . $contact_db_host . ';dbname=' . $contact_db_name . ';charset=utf8mb4';
+    $pdo = new PDO($dsn, $contact_db_user, $contact_db_pass, [
+      PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+  } catch (PDOException $e) {
+    if (function_exists('error_log')) {
+      error_log('Uthini contact: DB connect failed: ' . $e->getMessage());
+    }
+    return null;
+  }
+  return $pdo;
+}
+
+/**
+ * Create contact_log table if it does not exist.
+ */
+function contact_ensure_table(PDO $pdo): void {
+  static $done = false;
+  if ($done) {
+    return;
+  }
+  $sql = "CREATE TABLE IF NOT EXISTS contact_log (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(32) NOT NULL,
+    detail VARCHAR(128) NULL,
+    name VARCHAR(200) NULL,
+    email VARCHAR(254) NULL,
+    subject VARCHAR(300) NULL,
+    message TEXT NULL,
+    ip VARCHAR(45) NULL,
+    error_reason VARCHAR(500) NULL,
+    INDEX idx_created (created_at),
+    INDEX idx_status (status),
+    INDEX idx_ip (ip)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+  try {
+    $pdo->exec($sql);
+    $done = true;
+  } catch (PDOException $e) {
+    if (function_exists('error_log')) {
+      error_log('Uthini contact: create table failed: ' . $e->getMessage());
+    }
   }
 }
 
+/**
+ * Log one event to contact_log. Bounds string lengths; never throws.
+ */
+function contact_log_db(array $data): void {
+  $pdo = contact_db();
+  if (!$pdo) {
+    if (function_exists('error_log')) {
+      error_log('Uthini contact: ' . json_encode(array_intersect_key($data, array_flip(['status', 'detail', 'ip']))));
+    }
+    return;
+  }
+  contact_ensure_table($pdo);
+  $defaults = [
+    'status'       => '',
+    'detail'       => null,
+    'name'         => null,
+    'email'        => null,
+    'subject'      => null,
+    'message'      => null,
+    'ip'           => null,
+    'error_reason' => null,
+  ];
+  $row = array_merge($defaults, $data);
+  $row['status']       = mb_substr((string) $row['status'], 0, 32, 'UTF-8');
+  $row['detail']       = $row['detail'] !== null ? mb_substr((string) $row['detail'], 0, 128, 'UTF-8') : null;
+  $row['name']         = $row['name'] !== null ? mb_substr((string) $row['name'], 0, CONTACT_MAX_NAME, 'UTF-8') : null;
+  $row['email']        = $row['email'] !== null ? mb_substr((string) $row['email'], 0, CONTACT_MAX_EMAIL, 'UTF-8') : null;
+  $row['subject']      = $row['subject'] !== null ? mb_substr((string) $row['subject'], 0, CONTACT_MAX_SUBJECT, 'UTF-8') : null;
+  $row['message']      = $row['message'] !== null ? mb_substr((string) $row['message'], 0, CONTACT_MAX_MESSAGE, 'UTF-8') : null;
+  $row['ip']           = $row['ip'] !== null ? mb_substr((string) $row['ip'], 0, 45, 'UTF-8') : null;
+  $row['error_reason'] = $row['error_reason'] !== null ? mb_substr((string) $row['error_reason'], 0, CONTACT_MAX_ERROR_LEN, 'UTF-8') : null;
+
+  try {
+    $stmt = $pdo->prepare('INSERT INTO contact_log (status, detail, name, email, subject, message, ip, error_reason) VALUES (:status, :detail, :name, :email, :subject, :message, :ip, :error_reason)');
+    $stmt->execute([
+      'status'       => $row['status'],
+      'detail'       => $row['detail'],
+      'name'         => $row['name'],
+      'email'        => $row['email'],
+      'subject'      => $row['subject'],
+      'message'      => $row['message'],
+      'ip'           => $row['ip'],
+      'error_reason' => $row['error_reason'],
+    ]);
+  } catch (PDOException $e) {
+    if (function_exists('error_log')) {
+      error_log('Uthini contact: DB insert failed: ' . $e->getMessage());
+    }
+  }
+}
+
+// ——— Request handling ———
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: /contact.html');
-  exit;
+  contact_redirect(CONTACT_REDIRECT_PATH);
+}
+
+if (!contact_referer_ok()) {
+  contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=0');
 }
 
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 
-$rate_limit_file = sys_get_temp_dir() . '/uthini_contact_' . md5($ip);
-$rate_limit_window = 900;
-$rate_limit_max = 5;
-$now = time();
+// Rate limit (file-based per IP)
+$rateFile = sys_get_temp_dir() . '/uthini_contact_' . md5($ip);
+$now      = time();
 $timestamps = [];
-if (is_file($rate_limit_file)) {
-  $timestamps = array_filter(array_map('intval', explode("\n", (string) file_get_contents($rate_limit_file))), function ($t) use ($rate_limit_window, $now) {
-    return ($now - $t) < $rate_limit_window;
-  });
+if (is_file($rateFile)) {
+  $content = (string) file_get_contents($rateFile);
+  $timestamps = array_filter(
+    array_map('intval', explode("\n", $content)),
+    fn(int $t): bool => ($now - $t) < CONTACT_RATE_WINDOW
+  );
 }
-if (count($timestamps) >= $rate_limit_max) {
-  uthini_contact_log("BLOCKED rate_limit ip=$ip", $contact_log_file, $contact_log_fallback);
-  header('Location: /contact.html?thanks=0');
-  exit;
+if (count($timestamps) >= CONTACT_RATE_MAX) {
+  contact_log_db(['status' => CONTACT_STATUS_BLOCKED, 'detail' => 'rate_limit', 'ip' => $ip]);
+  contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=0');
 }
 
+// Honeypot
 if (isset($_POST['website']) && trim((string) $_POST['website']) !== '') {
-  uthini_contact_log("BLOCKED honeypot ip=$ip", $contact_log_file, $contact_log_fallback);
-  header('Location: /contact.html?thanks=0');
-  exit;
+  contact_log_db(['status' => CONTACT_STATUS_BLOCKED, 'detail' => 'honeypot', 'ip' => $ip]);
+  contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=0');
 }
 
-$sanitize = function ($s, $max_len = 10000) {
-  $s = trim((string) $s);
-  $s = str_replace(["\r", "\n"], ' ', $s);
-  return mb_substr($s, 0, $max_len, 'UTF-8');
-};
+$name    = contact_sanitize($_POST['name'] ?? '', CONTACT_MAX_NAME);
+$email   = contact_sanitize($_POST['email'] ?? '', CONTACT_MAX_EMAIL);
+$subject = contact_sanitize($_POST['subject'] ?? 'Uthini Solutions Enquiry', CONTACT_MAX_SUBJECT);
+$message = contact_sanitize($_POST['message'] ?? '', CONTACT_MAX_MESSAGE);
 
-$name    = $sanitize($_POST['name'] ?? '', 200);
-$email   = $sanitize($_POST['email'] ?? '', 254);
-$subject = $sanitize($_POST['subject'] ?? 'Uthini Solutions Enquiry', 300);
-$message = $sanitize($_POST['message'] ?? '', 10000);
-
-$ok = $name !== '' && $email !== '' && $message !== '' && filter_var($email, FILTER_VALIDATE_EMAIL);
+$emailValid = filter_var($email, FILTER_VALIDATE_EMAIL);
+$ok = $name !== '' && $email !== '' && $message !== '' && $emailValid;
 
 if (!$ok) {
   $reason = !$name ? 'name_empty' : (!$email ? 'email_empty' : (!$message ? 'message_empty' : 'email_invalid'));
-  uthini_contact_log("VALIDATION_FAILED $reason ip=$ip email=" . substr($email, 0, 50), $contact_log_file, $contact_log_fallback);
-} else {
-  $subject_line = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
-  $body = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
-
-  $sent = false;
-  $send_fail_reason = '';
-  $phpmailer_loaded = false;
-
-  if (is_file(__DIR__ . '/vendor/autoload.php')) {
-    try {
-      require_once __DIR__ . '/vendor/autoload.php';
-      $phpmailer_loaded = true;
-    } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_autoload " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
-    }
-  }
-  if (!$phpmailer_loaded && is_file(__DIR__ . '/phpmailer/src/PHPMailer.php')) {
-    try {
-      require_once __DIR__ . '/phpmailer/src/Exception.php';
-      require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
-      require_once __DIR__ . '/phpmailer/src/SMTP.php';
-      $phpmailer_loaded = true;
-    } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_manual " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
-    }
-  }
-
-  if ($phpmailer_loaded && class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-    try {
-      $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-      $mail->isSMTP();
-      $mail->Host = 'localhost';
-      $mail->Port = 25;
-      $mail->SMTPAuth = false;
-      $mail->SMTPAutoTLS = false;
-      $mail->setFrom($from_email, $from_name);
-      $mail->addReplyTo($email, $name);
-      foreach (array_map('trim', explode(',', $to)) as $addr) {
-        if ($addr !== '') {
-          $mail->addAddress($addr);
-        }
-      }
-      $mail->Subject = $subject_line;
-      $mail->Body = $body;
-      $mail->CharSet = 'UTF-8';
-      $mail->Encoding = 'base64';
-      $sent = $mail->send();
-    } catch (Throwable $e) {
-      $send_fail_reason = 'phpmailer_send: ' . $e->getMessage();
-      uthini_contact_log("ERROR " . $send_fail_reason, $contact_log_file, $contact_log_fallback);
-    }
-  }
-
-  if (!$sent) {
-    @ini_set('sendmail_from', $from_email);
-    $headers = "From: $from_name <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
-    $sent = @mail($to, $subject_line, $body, $headers);
-    if (!$sent) {
-      $send_fail_reason = 'mail() returned false';
-      uthini_contact_log("ERROR mail_failed To=$to From=$from_email", $contact_log_file, $contact_log_fallback);
-    }
-  }
-
-  $log_subject = str_replace(["\t", "\n", "\r"], ' ', $subject);
-  $log_subject = mb_substr($log_subject, 0, 60, 'UTF-8');
-  $status = $sent ? 'sent' : 'send_failed';
-  $log_line = "SUBMIT $status name=" . $name . " email=" . $email . " subject=" . $log_subject . " ip=$ip";
-  if (!$sent && $send_fail_reason !== '') {
-    $log_line .= " reason=" . $send_fail_reason;
-  }
-  uthini_contact_log($log_line, $contact_log_file, $contact_log_fallback);
-
-  $timestamps[] = $now;
-  @file_put_contents($rate_limit_file, implode("\n", $timestamps));
+  contact_log_db(['status' => CONTACT_STATUS_VALIDATION_FAILED, 'detail' => $reason, 'ip' => $ip, 'email' => $email]);
+  contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=0');
 }
 
-header('Location: /contact.html?thanks=' . ($ok ? '1' : '0'));
-exit;
+// Header injection check for mail()
+if (!contact_safe_header_value($name) || !contact_safe_header_value($email)) {
+  contact_log_db(['status' => CONTACT_STATUS_BLOCKED, 'detail' => 'header_injection', 'ip' => $ip]);
+  contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=0');
+}
+
+global $contact_to, $contact_from_email, $contact_from_name;
+
+$subjectLine = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
+$body        = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
+
+$sent           = false;
+$sendFailReason = '';
+
+// Try PHPMailer
+$phpmailerLoaded = false;
+if (is_file(__DIR__ . '/vendor/autoload.php')) {
+  try {
+    require_once __DIR__ . '/vendor/autoload.php';
+    $phpmailerLoaded = true;
+  } catch (Throwable $e) {
+    contact_log_db(['status' => CONTACT_STATUS_ERROR, 'detail' => 'phpmailer_autoload', 'error_reason' => $e->getMessage(), 'ip' => $ip]);
+  }
+}
+if (!$phpmailerLoaded && is_file(__DIR__ . '/phpmailer/src/PHPMailer.php')) {
+  try {
+    require_once __DIR__ . '/phpmailer/src/Exception.php';
+    require_once __DIR__ . '/phpmailer/src/PHPMailer.php';
+    require_once __DIR__ . '/phpmailer/src/SMTP.php';
+    $phpmailerLoaded = true;
+  } catch (Throwable $e) {
+    contact_log_db(['status' => CONTACT_STATUS_ERROR, 'detail' => 'phpmailer_manual', 'error_reason' => $e->getMessage(), 'ip' => $ip]);
+  }
+}
+
+if ($phpmailerLoaded && class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+  try {
+    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host       = 'relay-hosting.secureserver.net';
+    $mail->Port       = 25;
+    $mail->SMTPAuth   = false;
+    $mail->SMTPAutoTLS = false;
+    $mail->setFrom($contact_from_email, $contact_from_name);
+    $mail->addReplyTo($email, $name);
+    foreach (array_filter(array_map('trim', explode(',', $contact_to))) as $addr) {
+      if ($addr !== '') {
+        $mail->addAddress($addr);
+      }
+    }
+    $mail->Subject = $subjectLine;
+    $mail->Body    = $body;
+    $mail->CharSet = 'UTF-8';
+    $mail->Encoding = 'base64';
+    $sent = $mail->send();
+  } catch (Throwable $e) {
+    $sendFailReason = 'phpmailer_send: ' . $e->getMessage();
+  }
+}
+
+if (!$sent) {
+  @ini_set('sendmail_from', $contact_from_email);
+  $headers = "From: " . $contact_from_name . " <" . $contact_from_email . ">\r\n"
+    . "Reply-To: " . $email . "\r\n"
+    . "Content-Type: text/plain; charset=UTF-8\r\n"
+    . "X-Mailer: PHP/" . PHP_VERSION;
+  $sent = @mail($contact_to, $subjectLine, $body, $headers);
+  if (!$sent) {
+    $sendFailReason = 'mail() returned false';
+  }
+}
+
+$logSubject = str_replace(["\t", "\n", "\r"], ' ', $subject);
+$logSubject = mb_substr($logSubject, 0, CONTACT_MAX_SUBJECT, 'UTF-8');
+$status = $sent ? CONTACT_STATUS_SENT : CONTACT_STATUS_SEND_FAILED;
+
+contact_log_db([
+  'status'       => $status,
+  'name'         => $name,
+  'email'        => $email,
+  'subject'      => $logSubject,
+  'message'      => $message,
+  'ip'           => $ip,
+  'error_reason' => $sendFailReason !== '' ? $sendFailReason : null,
+]);
+
+$timestamps[] = $now;
+@file_put_contents($rateFile, implode("\n", $timestamps));
+
+contact_redirect(CONTACT_REDIRECT_PATH, 'thanks=1');

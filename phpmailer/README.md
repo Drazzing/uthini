@@ -1,6 +1,6 @@
 # PHPMailer – manual install (no Composer)
 
-The contact form uses PHPMailer when available (GoDaddy config: localhost, port 25, no auth, SMTPAutoTLS=false per [PHPMailer wiki](https://github.com/phpmailer/phpmailer/wiki/Troubleshooting)), then falls back to PHP `mail()`. You can install PHPMailer **without Composer** by putting the source here.
+The contact form uses PHPMailer when available with **GoDaddy Windows Hosting** settings: relay **relay-hosting.secureserver.net**, port **25**, no auth, no TLS. From address must be a valid email on your domain. Then falls back to PHP `mail()`. You can install PHPMailer **without Composer** by putting the source here.
 
 ## Steps
 

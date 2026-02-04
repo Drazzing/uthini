@@ -4,6 +4,9 @@ uthini.com
 # Contact form log (contains emails, IPs)
 contact-log.txt
 
+# Contact form config (contains DB password)
+contact-form-config.php
+
 # OS and editor
 .DS_Store
 Thumbs.db

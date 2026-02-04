@@ -755,9 +755,36 @@ main > section.section:first-child {
 .required {
   color: var(--color-primary);
 }
-button.cta[type="submit"] {
+button.cta[type="submit"],
+.cta--submit {
   cursor: pointer;
   border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.cta--submit:disabled,
+.contact-form.is-sending .cta--submit {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.cta__spinner {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: cta-spin 0.7s linear infinite;
+}
+.cta__spinner[hidden] {
+  display: none;
+}
+@keyframes cta-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ========== Utility ========== */
