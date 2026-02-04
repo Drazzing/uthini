@@ -11,12 +11,46 @@
 
   var toggle = document.querySelector(".nav-toggle");
   var nav = document.querySelector(".main-nav");
+  var backdrop = document.querySelector(".nav-backdrop");
+  var menu = document.getElementById("main-menu");
+
+  function closeMobileNav() {
+    if (!toggle || !nav) return;
+    var expanded = toggle.getAttribute("aria-expanded") === "true";
+    if (!expanded) return;
+    toggle.setAttribute("aria-expanded", "false");
+    nav.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("nav-open");
+    if (backdrop) backdrop.setAttribute("aria-hidden", "true");
+  }
+
+  function openMobileNav() {
+    toggle.setAttribute("aria-expanded", "true");
+    nav.setAttribute("aria-hidden", "false");
+    document.body.classList.add("nav-open");
+    if (backdrop) backdrop.setAttribute("aria-hidden", "false");
+  }
+
   if (toggle && nav) {
     toggle.addEventListener("click", function () {
       var expanded = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", !expanded);
-      nav.setAttribute("aria-hidden", expanded ? "true" : "false");
-      document.body.classList.toggle("nav-open", !expanded);
+      if (expanded) {
+        closeMobileNav();
+      } else {
+        openMobileNav();
+      }
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeMobileNav);
+  }
+
+  if (menu) {
+    menu.addEventListener("click", function (e) {
+      if (e.target && e.target.nodeName === "A") {
+        closeMobileNav();
+      }
     });
   }
 

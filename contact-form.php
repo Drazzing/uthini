@@ -54,9 +54,13 @@ $ok = $name !== '' && $email !== '' && $message !== '' && filter_var($email, FIL
 if ($ok) {
   $subject_line = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
   $body = "Name: $name\nEmail: $email\n\nMessage:\n$message";
-  // From: use a fixed sender so GoDaddy/mail servers don't reject or mark as spam. Reply-To: visitor so you can reply.
-  $headers = "From: Uthini Contact <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\n";
-  @mail($to, $subject_line, $body, $headers);
+  // From: use a fixed sender. On GoDaddy, using an @yourdomain.com address (e.g. info@uthini.com) often works better – set $from_email above.
+  // Reply-To: visitor so you can reply. X-Mailer: some GoDaddy servers expect it.
+  $headers = "From: Uthini Contact <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
+  $sent = @mail($to, $subject_line, $body, $headers);
+  if (!$sent && function_exists('error_log')) {
+    error_log('Uthini contact form: mail() returned false. To=' . $to . ' From=' . $from_email);
+  }
 
   $timestamps[] = $now;
   @file_put_contents($rate_limit_file, implode("\n", $timestamps));
