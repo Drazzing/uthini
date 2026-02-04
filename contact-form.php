@@ -15,7 +15,7 @@
  * Security: sanitization, rate limiting, honeypot, length limits.
  */
 $to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com';
-$from_email = 'shawn.rosewarne@gmail.com';
+$from_email = 'noreply@uthini123.com';
 $from_name = 'Uthini Contact';
 
 $contact_log_file = __DIR__ . '/contact-log.txt';
@@ -85,6 +85,7 @@ if (!$ok) {
   $body = "Name: $name\r\nEmail: $email\r\n\r\nMessage:\r\n$message";
 
   $sent = false;
+  $send_fail_reason = '';
   $phpmailer_loaded = false;
   if (!$sent) {
     if (is_file(__DIR__ . '/vendor/autoload.php')) {
@@ -134,7 +135,8 @@ if (!$ok) {
       $mail->Encoding = 'base64';
       $sent = $mail->send();
     } catch (Throwable $e) {
-      uthini_contact_log("ERROR phpmailer_send " . $e->getMessage(), $contact_log_file, $contact_log_fallback);
+      $send_fail_reason = 'phpmailer_send: ' . $e->getMessage();
+      uthini_contact_log("ERROR " . $send_fail_reason, $contact_log_file, $contact_log_fallback);
       if (function_exists('error_log')) {
         error_log('Uthini contact: PHPMailer send failed: ' . $e->getMessage());
       }
@@ -142,9 +144,11 @@ if (!$ok) {
   }
 
   if (!$sent) {
+    @ini_set('sendmail_from', $from_email);
     $headers = "From: $from_name <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
     $sent = @mail($to, $subject_line, $body, $headers);
     if (!$sent) {
+      $send_fail_reason = 'mail_failed (PHP mail() returned false)';
       uthini_contact_log("ERROR mail_failed To=$to From=$from_email", $contact_log_file, $contact_log_fallback);
       if (function_exists('error_log')) {
         error_log('Uthini contact form: mail() returned false. To=' . $to . ' From=' . $from_email);
@@ -155,7 +159,11 @@ if (!$ok) {
   $log_subject = str_replace(["\t", "\n", "\r"], ' ', $subject);
   $log_subject = mb_substr($log_subject, 0, 60, 'UTF-8');
   $status = $sent ? 'sent' : 'send_failed';
-  uthini_contact_log("SUBMIT $status name=" . $name . " email=" . $email . " subject=" . $log_subject . " ip=$ip", $contact_log_file, $contact_log_fallback);
+  $log_line = "SUBMIT $status name=" . $name . " email=" . $email . " subject=" . $log_subject . " ip=$ip";
+  if (!$sent && $send_fail_reason !== '') {
+    $log_line .= " reason=" . $send_fail_reason;
+  }
+  uthini_contact_log($log_line, $contact_log_file, $contact_log_fallback);
 
   $timestamps[] = $now;
   @file_put_contents($rate_limit_file, implode("\n", $timestamps));
