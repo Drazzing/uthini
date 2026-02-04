@@ -2,6 +2,12 @@
 
 Your form posts to `contact-form.php`. On GoDaddy, PHP `mail()` is often restricted or unreliable. Options below.
 
+**Official GoDaddy guide:** [Send form mail using an SMTP relay server](https://www.godaddy.com/en-in/help/send-form-mail-using-an-smtp-relay-server-953)
+
+- **Windows Hosting (Plesk):** Host = **localhost**, port 25, no auth/SSL. With `mail()` you do not need to specify a relay.
+- **Web Hosting (cPanel):** Host = **relay-hosting.secureserver.net**, port 25, no auth/SSL.
+- **From:** Must be an email on your domain (you manage DNS). Add SPF: `v=spf1 include:secureserver.net -all`.
+
 ---
 
 ## Option A: Formspree (no server mail – works in minutes)
