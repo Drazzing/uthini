@@ -87,13 +87,13 @@ a:hover {
   opacity: 0.9;
 }
 .site-logo img {
-  height: 4rem;
+  height: 5rem;
   width: auto;
   max-height: 100%;
 }
-@media (min-width: var(--bp-md)) {
+@media (min-width: 48rem) {
   .site-logo img {
-    height: 5rem;
+    height: 6rem;
   }
 }
 
@@ -126,13 +126,21 @@ a:hover {
   outline-offset: 2px;
 }
 
-/* Mobile nav: hamburger icon, slide transition, backdrop */
-@media (min-width: var(--bp-md)) {
+/* Hide "Menu" text always; show hamburger only on mobile */
+.nav-toggle span {
+  font-size: 0;
+  line-height: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-indent: -9999px;
+}
+/* Desktop: hide nav toggle completely */
+@media (min-width: 48rem) {
   .nav-toggle {
-    display: none;
+    display: none !important;
   }
 }
-@media (max-width: var(--bp-md-down)) {
+@media (max-width: 47.9375rem) {
   .nav-toggle {
     display: flex;
     align-items: center;
@@ -437,7 +445,7 @@ main {
   align-items: center;
   justify-content: center;
   background: var(--hero-gradient);
-  background-image: url("../images/hero-banner.png"), var(--hero-gradient);
+  background-image: url("../images/hero-banner-web-small.jpg"), var(--hero-gradient);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

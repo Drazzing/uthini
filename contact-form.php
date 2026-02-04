@@ -1,11 +1,14 @@
 <?php
 /**
  * Contact form handler – runs on your server. No third-party signup.
- * Set $to to your email below. Your email is never published on the site.
+ * Set $to and $from_email below. Your email is never published on the site.
+ *
+ * If you don't receive emails: (1) Check spam/junk. (2) From is now a fixed address so servers don't reject. (3) On GoDaddy Windows, mail() can be unreliable – if it still fails, use SMTP (e.g. PHPMailer with Gmail or GoDaddy SMTP).
  *
  * Security: input sanitization (header injection), rate limiting, honeypot, length limits.
  */
-$to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com'; // You and Garry
+$to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com'; // Recipients
+$from_email = 'shawn.rosewarne@gmail.com'; // Use a known sender so mail isn't rejected (same domain or your address)
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   header('Location: contact.html');
@@ -51,8 +54,8 @@ $ok = $name !== '' && $email !== '' && $message !== '' && filter_var($email, FIL
 if ($ok) {
   $subject_line = 'Uthini Solutions: ' . ($subject !== '' ? $subject : 'Enquiry');
   $body = "Name: $name\nEmail: $email\n\nMessage:\n$message";
-  // Use only sanitized email in headers to prevent header injection
-  $headers = "From: $email\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\n";
+  // From: use a fixed sender so GoDaddy/mail servers don't reject or mark as spam. Reply-To: visitor so you can reply.
+  $headers = "From: Uthini Contact <$from_email>\r\nReply-To: $email\r\nContent-Type: text/plain; charset=UTF-8\r\n";
   @mail($to, $subject_line, $body, $headers);
 
   $timestamps[] = $now;
