@@ -1,6 +1,30 @@
 # Contact form not receiving email – what to check (GoDaddy)
 
-Your form posts to `contact-form.php`, which uses PHP’s `mail()`. On GoDaddy, `mail()` is often restricted or unreliable. Use this checklist.
+Your form posts to `contact-form.php`. On GoDaddy, PHP `mail()` is often restricted or unreliable. Options below.
+
+---
+
+## Option A: Formspree (no server mail – works in minutes)
+
+Use a third-party form backend so you don’t rely on GoDaddy mail at all.
+
+1. Go to **[formspree.io](https://formspree.io)** and sign up (free tier is fine).
+2. Create a new form; Formspree gives you a URL like `https://formspree.io/f/xxxxxx`.
+3. In **contact.html**, change the form to:
+   - **action:** `https://formspree.io/f/YOUR_FORM_ID` (replace `YOUR_FORM_ID` with your ID).
+   - **method:** `post` (keep as is).
+   - Add this hidden input **inside** the `<form>`, before the first form group:
+     ```html
+     <input type="hidden" name="_next" value="https://uthini.com/contact.html?thanks=1">
+     <input type="hidden" name="_replyto" value="" id="contact-email-replyto">
+     ```
+     (Optional: use JavaScript to set `contact-email-replyto` from the email field so Formspree uses it as Reply-To.)
+   - You can leave the rest of the form (name, email, subject, message) as is; Formspree forwards all fields to your email.
+4. In Formspree dashboard, set the email address where you want to receive submissions.
+5. Submit a test. You should get the email and be redirected to `contact.html?thanks=1`.
+
+**Pros:** No server config, no spam from your server, works immediately.  
+**Cons:** Formspree branding on free tier; for heavy use check their limits.
 
 ---
 
@@ -72,4 +96,4 @@ After changing `$from_email` or SMTP:
 
 ---
 
-**Summary:** Prefer **From = @uthini.com** and **SPF with secureserver.net**. If mail still doesn’t arrive, switch to **PHPMailer + relay-hosting.secureserver.net** and we can adapt `contact-form.php` for that.
+**Summary:** Prefer **From = @uthini.com** and **SPF with secureserver.net**. If mail still doesn’t arrive, install PHPMailer (Composer) so the script can use GoDaddy's relay; `contact-form.php` already uses it when `vendor/autoload.php` exists.

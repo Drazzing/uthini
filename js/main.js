@@ -1,5 +1,5 @@
 /**
- * Uthini – footer year, mobile nav, scroll reveal
+ * Uthini – hero logo fly-in, footer year, mobile nav, scroll reveal
  */
 (function () {
   "use strict";
@@ -7,6 +7,16 @@
   var yearEl = document.getElementById("year");
   if (yearEl) {
     yearEl.textContent = new Date().getFullYear();
+  }
+
+  /* Hero logo: fly in after first paint so CSS transition runs */
+  var heroLogo = document.querySelector(".hero__logo");
+  if (heroLogo) {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        heroLogo.classList.add("hero__logo--in");
+      });
+    });
   }
 
   var toggle = document.querySelector(".nav-toggle");

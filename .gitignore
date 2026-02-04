@@ -1,6 +1,9 @@
 # FTP / hosting credentials - do not commit
 uthini.com
 
+# Contact form log (contains emails, IPs)
+contact-log.txt
+
 # OS and editor
 .DS_Store
 Thumbs.db
