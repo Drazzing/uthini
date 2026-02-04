@@ -1,15 +1,13 @@
-<%@ Page Language="C#" %>
-<%@ Import Namespace="System.Net" %>
+<%@ Page Language="C#" AutoEventWireup="true" %>
 <%@ Import Namespace="System.Net.Mail" %>
 <script runat="server">
-  // GoDaddy Windows Hosting: use localhost, port 25, no auth. From = valid email on your domain.
   const string ToAddresses = "shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com";
   const string FromEmail = "noreply@uthini123.com";
   const string FromName = "Uthini Contact";
 
   void Page_Load(object sender, EventArgs e)
   {
-    if (Request.RequestType != "POST")
+    if (!string.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase))
     {
       Response.Redirect("/contact.html");
       return;
@@ -75,3 +73,8 @@
     Response.Redirect(sent ? "/contact.html?thanks=1" : "/contact.html?thanks=0&reason=send");
   }
 </script>
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><title>Contact</title></head>
+<body><p>Redirecting...</p></body>
+</html>
