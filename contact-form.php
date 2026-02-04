@@ -68,7 +68,18 @@ if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
     $mail->CharSet = 'UTF-8';
     $sent = $mail->send();
   } catch (Throwable $e) {
+    error_log('[contact-form] PHPMailer: ' . $e->getMessage());
     $sent = false;
+  }
+}
+
+if (!$sent) {
+  ini_set('sendmail_from', $from_email);
+  $to_list = implode(', ', array_filter(array_map('trim', explode(',', $to))));
+  $headers = "From: $from_name <$from_email>\r\nReply-To: $name <$email>\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . PHP_VERSION;
+  $sent = @mail($to_list, $subject_line, $body, $headers);
+  if (!$sent) {
+    error_log('[contact-form] mail() returned false');
   }
 }
 
