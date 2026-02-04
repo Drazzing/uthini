@@ -1,22 +1,14 @@
-# Contact form – database logging
+# Contact log table (SQL Server)
 
-Contact form events are written to the **contact_log** table. Create the table once manually (script does not create it).
+**contact_log.sql** creates the `contact_log` table for Microsoft SQL Server. Use it if you add database logging to the contact form.
 
-## Windows hosting (GoDaddy Plesk)
+The current **contact-form.php** does not write to a database; it only sends email (PHPMailer or PHP `mail()`).
 
-GoDaddy Windows hosting can use **SQL Server** or **MySQL**. Choose one:
+## How to run
 
-| Database   | Script to run        | In contact-form-config.php   |
-|-----------|----------------------|------------------------------|
-| SQL Server | **contact_log.sql** (repo root) | `$contact_db_driver = 'sqlsrv'` |
-| MySQL      | **contact_log_mysql.sql**       | `$contact_db_driver = 'mysql'`  |
-
-- **SQL Server:** Open in SSMS or your SQL Server tool, select database (e.g. `Drazzing123_`), run the script. PHP needs the **pdo_sqlsrv** extension (Microsoft Drivers for PHP for SQL Server).
-- **MySQL:** In **Plesk → Databases → phpMyAdmin**, select database, SQL tab, paste and run **contact_log_mysql.sql**.
-
-## Set config in contact-form-config.php
-
-Set `$contact_db_pass` and, for Windows hosting, `$contact_db_driver` (`'sqlsrv'` or `'mysql'`). Keep `$contact_db_host`, `$contact_db_name`, `$contact_db_user` as needed.
+1. Open the script in SSMS or your SQL Server tool.
+2. Select your database (e.g. your GoDaddy SQL Server database).
+3. Execute the script once.
 
 ## Table: contact_log
 
@@ -32,5 +24,3 @@ Set `$contact_db_pass` and, for Windows hosting, `$contact_db_driver` (`'sqlsrv'
 | message     | Message body                                      |
 | ip          | Client IP                                         |
 | error_reason| Error message when status is send_failed or error  |
-
-If the database connection fails, the script still runs and falls back to PHP `error_log()` for that request.
