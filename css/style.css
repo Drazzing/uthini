@@ -73,6 +73,8 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 101;
 }
 
 .site-logo {
@@ -126,6 +128,44 @@ a:hover {
   outline-offset: 2px;
 }
 
+/* Software submenu – desktop dropdown */
+.nav-item--has-sub {
+  position: relative;
+}
+.nav-sub {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 48rem) {
+  .nav-sub {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 10rem;
+    padding: var(--space-xs) 0;
+    background: var(--color-surface);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.25rem);
+    transition: opacity var(--transition-fast), visibility var(--transition-fast), transform var(--transition-fast);
+  }
+  .nav-item--has-sub:hover .nav-sub,
+  .nav-item--has-sub:focus-within .nav-sub {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .nav-sub a {
+    display: block;
+    padding: 0.5rem var(--space-lg);
+    white-space: nowrap;
+  }
+}
+
 .nav-backdrop {
   display: none;
 }
@@ -171,7 +211,7 @@ a:hover {
     height: 2px;
     background: currentColor;
     font-size: 0;
-    overflow: hidden;
+    overflow: visible;
   }
   .nav-toggle span::before,
   .nav-toggle span::after {
@@ -218,10 +258,11 @@ a:hover {
   }
   .main-nav ul {
     flex-direction: column;
-    position: absolute;
+    position: fixed;
     top: var(--header-height);
     left: 0;
     right: 0;
+    z-index: 102;
     background: var(--color-surface);
     padding: var(--space-md) 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -232,7 +273,7 @@ a:hover {
     transition: max-height 0.35s var(--ease-out), opacity 0.25s var(--ease-out);
   }
   .main-nav:not([aria-hidden="true"]) ul {
-    max-height: 22rem;
+    max-height: 26rem;
     opacity: 1;
   }
   .main-nav ul li {
@@ -240,6 +281,23 @@ a:hover {
   }
   .main-nav ul li:last-child {
     border-bottom: none;
+  }
+  .main-nav .nav-sub {
+    position: static;
+    min-width: 0;
+    padding: 0 0 0 var(--space-lg);
+    border: none;
+    box-shadow: none;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+  .main-nav .nav-sub li {
+    border-bottom: none;
+  }
+  .main-nav .nav-sub a {
+    padding: 0.5rem var(--space-lg);
+    font-size: 1rem;
   }
   .main-nav a {
     padding: 1rem var(--space-lg);
@@ -357,6 +415,9 @@ main {
 .form-thanks {
   max-width: 32rem;
 }
+.form-thanks--error .form-thanks__message {
+  color: var(--color-primary);
+}
 .form-thanks__message {
   font-size: 1.125rem;
   font-weight: 500;
@@ -462,6 +523,28 @@ main {
 .section__cta-text {
   margin: 0 0 var(--space-lg);
   font-size: 1.125rem;
+}
+
+.software-list {
+  list-style: none;
+  margin: 0 0 var(--space-2xl);
+  padding: 0;
+}
+.software-list__item {
+  padding: var(--space-xl) 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.software-list__item:last-child {
+  border-bottom: none;
+}
+.software-list__item .section__subtitle {
+  margin-top: 0;
+}
+.software-list__item .section__subtitle a {
+  color: var(--color-primary);
+}
+.software-list__item .section__subtitle a:hover {
+  color: var(--color-secondary);
 }
 
 /* ========== Hero ========== */

@@ -25,6 +25,7 @@
   }
 
   function openMobileNav() {
+    if (!toggle || !nav) return;
     toggle.setAttribute("aria-expanded", "true");
     nav.setAttribute("aria-hidden", "false");
     document.body.classList.add("nav-open");

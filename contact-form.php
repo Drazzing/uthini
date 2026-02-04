@@ -11,7 +11,7 @@ $to = 'shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com'; // Recipients
 $from_email = 'shawn.rosewarne@gmail.com'; // Use a known sender so mail isn't rejected (same domain or your address)
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: contact.html');
+  header('Location: /contact.html');
   exit;
 }
 
@@ -27,13 +27,13 @@ if (is_file($rate_limit_file)) {
   });
 }
 if (count($timestamps) >= $rate_limit_max) {
-  header('Location: contact.html?thanks=0');
+  header('Location: /contact.html?thanks=0');
   exit;
 }
 
 // --- Honeypot: bots often fill this; humans leave it empty ---
 if (isset($_POST['website']) && trim((string) $_POST['website']) !== '') {
-  header('Location: contact.html?thanks=0');
+  header('Location: /contact.html?thanks=0');
   exit;
 }
 
@@ -66,5 +66,5 @@ if ($ok) {
   @file_put_contents($rate_limit_file, implode("\n", $timestamps));
 }
 
-header('Location: contact.html?thanks=' . ($ok ? '1' : '0'));
+header('Location: /contact.html?thanks=' . ($ok ? '1' : '0'));
 exit;

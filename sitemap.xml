@@ -16,6 +16,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://uthini.com/software.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://uthini.com/orchestrator.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

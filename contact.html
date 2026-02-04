@@ -34,7 +34,12 @@
           <li><a href="index.html">Home</a></li>
           <li><a href="about.html">About</a></li>
           <li><a href="services.html">Services</a></li>
-          <li><a href="orchestrator.html">Orchestrator</a></li>
+          <li class="nav-item--has-sub">
+            <a href="software.html">Software</a>
+            <ul class="nav-sub">
+              <li><a href="orchestrator.html">Orchestrator</a></li>
+            </ul>
+          </li>
           <li><a href="contact.html" aria-current="page">Contact Us</a></li>
         </ul>
       </nav>
@@ -52,7 +57,11 @@
         <a href="index.html" class="cta">Back to home</a>
       </div>
 
-      <form id="contact-form" class="contact-form" action="contact-form.php" method="post" novalidate>
+      <div id="form-error" class="form-thanks form-thanks--error" hidden role="alert">
+        <p class="form-thanks__message">Something went wrong. Please check the required fields and try again, or email us directly.</p>
+      </div>
+
+      <form id="contact-form" class="contact-form" action="/contact-form.php" method="post" novalidate>
         <!-- Honeypot: leave empty; bots often fill it -->
         <div class="visually-hidden" aria-hidden="true">
           <label for="contact-website">Website</label>
@@ -99,7 +108,7 @@
       <nav aria-label="Footer navigation">
         <a href="about.html">About</a>
         <a href="services.html">Services</a>
-        <a href="orchestrator.html">Orchestrator</a>
+        <a href="software.html">Software</a>
         <a href="contact.html">Contact Us</a>
       </nav>
     </div>
