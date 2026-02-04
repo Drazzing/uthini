@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to GoDaddy
+      - name: Deploy to GoDaddy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
