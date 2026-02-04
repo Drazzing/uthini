@@ -1,0 +1,47 @@
+---
+description: UX design principles based on Laws of UX (lawsofux.com) for user-centred interfaces
+alwaysApply: true
+---
+
+# UX Design Principles
+
+Apply these principles when designing or reviewing UI, CSS, HTML, or front-end code.
+
+## Core Principles (Laws of UX)
+
+- **Fitts's Law**: Larger, closer targets are easier to use. Use adequate tap/click targets (min ~44px), padding on links and buttons.
+- **Hick's Law**: Fewer choices = faster decisions. Limit primary nav items; avoid overwhelming menus or forms.
+- **Jakob's Law**: Users expect familiar patterns. Use standard nav (e.g. top nav, hamburger on mobile), clear CTAs, consistent placement.
+- **Miller's Law**: People hold ~7±2 items in working memory. Chunk lists (e.g. feature grids), limit visible options per step.
+- **Aesthetic-Usability Effect**: Pleasing design is perceived as more usable. Use consistent spacing, hierarchy, and brand alignment.
+- **Law of Proximity**: Group related elements with spacing; separate unrelated ones.
+- **Cognitive Load**: Reduce mental effort. Clear labels, one primary action per section, avoid unnecessary complexity.
+
+## Patterns to Follow
+
+- Consistent spacing scale (e.g. 4/8px base) and typography hierarchy.
+- Active/current state for navigation; focus-visible for keyboard users.
+- Single primary CTA per section; secondary actions visually de-emphasised.
+- Responsive breakpoints with readable text and touch-friendly targets on small screens.
+
+## Anti-patterns to Avoid
+
+- Tiny clickable areas; links or buttons with no padding.
+- Dozens of equal-weight options in one menu or form step.
+- Non-standard navigation (e.g. no hamburger on mobile) without clear affordance.
+- Inconsistent gaps, alignment, or hierarchy between pages.
+- Dense walls of text or controls with no grouping or whitespace.
+
+## Quick Examples
+
+**Target size (Fitts's Law)**  
+- Bad: `<a href="#">Menu</a>` with no padding.  
+- Good: Nav links with `padding: 0.5rem 0.75rem`; mobile tap targets ≥44px.
+
+**Proximity**  
+- Bad: Same gap between a heading and unrelated content below as between heading and its paragraph.  
+- Good: Smaller gap between heading and its content; larger gap before next section.
+
+**Choice overload (Hick's Law)**  
+- Bad: 15 nav items in one row.  
+- Good: 5–7 main items; group secondary links (e.g. footer or dropdown).

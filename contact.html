@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact Us – Uthini Solutions</title>
+  <meta name="description" content="Contact Uthini Solutions. Send a message for consulting, development, and design enquiries. We respond quickly.">
+  <meta name="author" content="Uthini Solutions">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <meta property="og:title" content="Contact Us – Uthini Solutions">
+  <meta property="og:description" content="Contact Uthini Solutions. Consulting, development, design. We respond quickly.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://uthini.com/contact.html">
+  <meta property="og:image" content="https://uthini.com/images/og-image.png">
+  <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="index.html" class="site-logo" aria-label="Uthini Solutions home">
+        <img src="images/logo.svg" alt="Uthini Solutions" width="240" height="68" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+        <span style="display:none;">Uthini Solutions</span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation" aria-hidden="true">
+        <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="main-menu" aria-label="Toggle menu">
+          <span aria-hidden="true">Menu</span>
+        </button>
+        <ul id="main-menu">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="services.html">Services</a></li>
+          <li><a href="orchestrator.html">Orchestrator</a></li>
+          <li><a href="contact.html" aria-current="page">Contact Us</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="section section--form">
+      <h1 class="section__title">Contact Us</h1>
+      <p>Ready to start a project or have a question? Send a message and we'll respond as soon as we can.</p>
+
+      <div id="form-thanks" class="form-thanks" hidden>
+        <p class="form-thanks__message">Thanks for getting in touch. We'll respond shortly.</p>
+        <a href="index.html" class="cta">Back to home</a>
+      </div>
+
+      <form id="contact-form" class="contact-form" action="contact-form.php" method="post" novalidate>
+        <!-- Honeypot: leave empty; bots often fill it -->
+        <div class="visually-hidden" aria-hidden="true">
+          <label for="contact-website">Website</label>
+          <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="contact-name">Name <span class="required" aria-hidden="true">*</span></label>
+          <input type="text" id="contact-name" name="name" required autocomplete="name" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label for="contact-email">Email <span class="required" aria-hidden="true">*</span></label>
+          <input type="email" id="contact-email" name="email" required autocomplete="email" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label for="contact-subject">Subject</label>
+          <input type="text" id="contact-subject" name="subject" autocomplete="off" placeholder="e.g. Project enquiry">
+        </div>
+        <div class="form-group">
+          <label for="contact-message">Message <span class="required" aria-hidden="true">*</span></label>
+          <textarea id="contact-message" name="message" required rows="5" placeholder="Tell us about your project or question."></textarea>
+        </div>
+        <button type="submit" class="cta">Send message</button>
+      </form>
+
+      <div class="section__meta">
+        <h2 class="section__subtitle">Registered office</h2>
+        <p>
+          Uthini Pty Ltd<br>
+          6 The Foreshore, Bogangar, NSW 2488
+        </p>
+        <p><strong>Enquiries:</strong> Balgowlah, NSW, Sydney</p>
+      </div>
+
+      <a href="index.html" class="cta cta--secondary">Back to home</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div>
+        <a href="index.html" class="site-logo" style="color: inherit;">Uthini Solutions</a>
+        <small>Uthini Solutions &copy; <span id="year"></span> &middot; Uthini Pty Ltd | <a href="terms.html">Terms</a></small>
+      </div>
+      <nav aria-label="Footer navigation">
+        <a href="about.html">About</a>
+        <a href="services.html">Services</a>
+        <a href="orchestrator.html">Orchestrator</a>
+        <a href="contact.html">Contact Us</a>
+      </nav>
+    </div>
+  </footer>
+  <script src="js/main.js" defer></script>
+  <script src="js/contact.js" defer></script>
+</body>
+</html>

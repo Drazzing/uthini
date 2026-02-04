@@ -1,0 +1,8 @@
+# FTP / hosting credentials - do not commit
+uthini.com
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
