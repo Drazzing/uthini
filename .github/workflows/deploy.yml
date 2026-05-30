@@ -3,9 +3,6 @@
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   CLOUDFLARE_API_TOKEN   – API token with "Cloudflare Pages: Edit"
 #   CLOUDFLARE_ACCOUNT_ID  – Account ID from Workers & Pages sidebar
-#
-# Optional variable (Settings → Variables → Actions):
-#   CLOUDFLARE_PAGES_PROJECT – defaults to "uthini"
 
 name: Publish site
 
@@ -20,40 +17,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build site
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build deploy folder
-        run: bash scripts/prepare-deploy.sh
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: dist/
-          retention-days: 7
-
   deploy:
     name: Deploy to Cloudflare Pages
-    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
     steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::error::Missing GitHub secret CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+          if [ "$HAS_ACCOUNT" != "true" ]; then
+            echo "::error::Missing GitHub secret CLOUDFLARE_ACCOUNT_ID"
+            exit 1
+          fi
+
+      - name: Build deploy folder
+        run: bash scripts/prepare-deploy.sh
+
+      - name: Create Pages project if missing
+        uses: cloudflare/wrangler-action@v3
         with:
-          name: site
-          path: dist
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create uthini --production-branch=main
+        continue-on-error: true
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=uthini --commit-dirty=true
+          command: pages deploy dist --project-name=uthini --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          wranglerVersion: "3"

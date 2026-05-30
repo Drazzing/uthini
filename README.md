@@ -38,6 +38,17 @@ Repo → **Settings → Secrets and variables → Actions**:
 
 The workflow builds `dist/` and deploys to the Cloudflare Pages project `uthini`.
 
+### Deploy failed?
+
+| Error / cause | Fix |
+|---------------|-----|
+| Missing secret | Add both `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in GitHub → Settings → Secrets → Actions |
+| Project does not exist | Workflow auto-creates `uthini`; or create manually in Workers & Pages → Create → Pages |
+| Authentication error | Token needs **Account → Cloudflare Pages → Edit**; revoke and create a new token if exposed |
+| Wrong Account ID | Copy from Cloudflare **Workers & Pages** sidebar (32-character hex string) |
+
+Re-run from **Actions → Publish site → Run workflow** after fixing.
+
 **Alternative:** connect the repo directly in Cloudflare Pages (build command `bash scripts/prepare-deploy.sh`, output `dist`). Use one method, not both.
 
 ### Contact form environment variables
