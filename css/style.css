@@ -362,6 +362,10 @@ main > section.section:first-child {
   }
 }
 
+.site-footer .site-logo {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .site-footer a {
   color: rgba(255, 255, 255, 0.85);
   transition: color var(--transition-fast);

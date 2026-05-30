@@ -14,6 +14,8 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://uthini.com/contact.html">
   <meta property="og:image" content="https://uthini.com/images/og-image.png">
+  <!-- Set content to your Turnstile site key to enable bot protection; leave empty to disable -->
+  <meta name="turnstile-site-key" content="">
   <link rel="icon" href="images/favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/style.css">
@@ -23,8 +25,8 @@
   <header class="site-header">
     <div class="site-header__inner">
       <a href="index.html" class="site-logo" aria-label="Uthini Solutions home">
-        <img src="images/logo.svg" alt="Uthini Solutions" width="240" height="68" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-        <span style="display:none;">Uthini Solutions</span>
+        <img class="site-logo__img" src="images/logo.svg" alt="Uthini Solutions" width="240" height="68">
+        <span class="site-logo__fallback" hidden>Uthini Solutions</span>
       </a>
       <nav class="main-nav" aria-label="Main navigation" aria-hidden="true">
         <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="main-menu" aria-label="Toggle menu">
@@ -62,27 +64,31 @@
       </div>
 
       <form id="contact-form" class="contact-form" action="/contact-form" method="post" novalidate>
-        <!-- Honeypot: leave empty; bots often fill it -->
+        <!-- Honeypot fields: leave empty; bots often fill visible-looking traps -->
         <div class="visually-hidden" aria-hidden="true">
           <label for="contact-website">Website</label>
           <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
+          <label for="contact-url">URL</label>
+          <input type="text" id="contact-url" name="url" tabindex="-1" autocomplete="off">
         </div>
+        <input type="hidden" id="contact-ts" name="_ts" value="">
         <div class="form-group">
           <label for="contact-name">Name <span class="required" aria-hidden="true">*</span></label>
-          <input type="text" id="contact-name" name="name" required autocomplete="name" placeholder="Your name">
+          <input type="text" id="contact-name" name="name" required maxlength="200" autocomplete="name" placeholder="Your name">
         </div>
         <div class="form-group">
           <label for="contact-email">Email <span class="required" aria-hidden="true">*</span></label>
-          <input type="email" id="contact-email" name="email" required autocomplete="email" placeholder="your@email.com">
+          <input type="email" id="contact-email" name="email" required maxlength="254" autocomplete="email" placeholder="your@email.com">
         </div>
         <div class="form-group">
           <label for="contact-subject">Subject</label>
-          <input type="text" id="contact-subject" name="subject" autocomplete="off" placeholder="e.g. Project enquiry">
+          <input type="text" id="contact-subject" name="subject" maxlength="300" autocomplete="off" placeholder="e.g. Project enquiry">
         </div>
         <div class="form-group">
           <label for="contact-message">Message <span class="required" aria-hidden="true">*</span></label>
-          <textarea id="contact-message" name="message" required rows="5" placeholder="Tell us about your project or question."></textarea>
+          <textarea id="contact-message" name="message" required maxlength="10000" rows="5" placeholder="Tell us about your project or question."></textarea>
         </div>
+        <div id="turnstile-widget" class="form-group"></div>
         <button type="submit" class="cta cta--submit" id="contact-submit-btn" aria-live="polite">
           <span class="cta__text">Send message</span>
           <span class="cta__spinner" aria-hidden="true" hidden></span>
@@ -105,7 +111,7 @@
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div>
-        <a href="index.html" class="site-logo" style="color: inherit;">Uthini Solutions</a>
+        <a href="index.html" class="site-logo">Uthini Solutions</a>
         <small>Uthini Solutions &copy; <span id="year"></span> &middot; Uthini Pty Ltd | <a href="terms.html">Terms</a></small>
       </div>
       <nav aria-label="Footer navigation">

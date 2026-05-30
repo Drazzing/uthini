@@ -24,8 +24,8 @@
   <header class="site-header">
     <div class="site-header__inner">
       <a href="index.html" class="site-logo" aria-label="Uthini Solutions home">
-        <img src="images/logo.svg" alt="Uthini Solutions" width="240" height="68" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-        <span style="display:none;">Uthini Solutions</span>
+        <img class="site-logo__img" src="images/logo.svg" alt="Uthini Solutions" width="240" height="68">
+        <span class="site-logo__fallback" hidden>Uthini Solutions</span>
       </a>
       <nav class="main-nav" aria-label="Main navigation" aria-hidden="true">
         <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="main-menu" aria-label="Toggle menu">
@@ -52,7 +52,7 @@
     <section class="hero">
       <span class="hero__accent" aria-hidden="true"></span>
       <div class="hero__logo-wrap" aria-hidden="true">
-        <img class="hero__logo" src="images/logo.svg" alt="" width="280" height="80" fetchpriority="high" onerror="this.style.display='none'">
+        <img class="hero__logo" src="images/logo.svg" alt="" width="280" height="80" fetchpriority="high">
       </div>
       <h1 class="hero__title">Uthini Solutions</h1>
       <p class="hero__subtitle">We create sleek, customised software that suits your business needs.</p>
@@ -102,7 +102,7 @@
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div>
-        <a href="index.html" class="site-logo" style="color: inherit;">Uthini Solutions</a>
+        <a href="index.html" class="site-logo">Uthini Solutions</a>
         <small>Uthini Solutions &copy; <span id="year"></span> &middot; Uthini Pty Ltd | <a href="terms.html">Terms</a></small>
       </div>
       <nav aria-label="Footer navigation">

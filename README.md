@@ -87,12 +87,43 @@ CONTACT_FROM=noreply@uthini.com
 - Colours/fonts: **`css/variables.css`**
 - Social image: **`images/og-image.png`** (1200×630)
 
-## Contact form security
+## Security
+
+### HTTP headers (all pages)
+
+Set in `_headers` and enforced on function responses via `functions/_middleware.js`:
+
+- **Strict-Transport-Security** — HTTPS only
+- **Content-Security-Policy** — restricts scripts, styles, frames, and form targets to trusted sources
+- **X-Frame-Options / frame-ancestors** — clickjacking protection
+- **X-Content-Type-Options** — blocks MIME sniffing
+- **Referrer-Policy**, **COOP**, **CORP**, **Permissions-Policy**
+
+### Contact form
 
 | Measure | Purpose |
 |--------|--------|
 | No email in HTML | Recipients only in Cloudflare env vars |
-| Input sanitization | Trims input, strips newlines/tags |
-| Length limits | Name 200, email 254, subject 300, message 10,000 |
-| Rate limiting | 5 submissions per 15 min per IP |
-| Honeypot | Hidden `website` field rejects bots |
+| Origin / Referer check | Rejects cross-site form posts |
+| Content-Type validation | Only accepts standard form submissions |
+| Body size limit | 32 KB max payload |
+| Input sanitization | Strips control chars, HTML, newlines |
+| Header injection guard | Sanitizes name/subject used in email headers |
+| Length limits | Enforced client- and server-side |
+| Rate limiting | 5 POSTs per 15 min per IP |
+| Honeypot fields | Hidden `website` and `url` trap bots |
+| Timing check | Rejects submissions faster than 3 s or older than 1 h |
+| Optional Turnstile | Set site key in `contact.html` meta + `TURNSTILE_SECRET_KEY` env |
+
+### Enable Turnstile (recommended)
+
+1. Cloudflare dashboard → **Turnstile** → Add widget for `uthini.com`
+2. In `contact.html`, set `<meta name="turnstile-site-key" content="YOUR_SITE_KEY">`
+3. In Pages env vars, set `TURNSTILE_SECRET_KEY`
+
+### Cloudflare dashboard settings
+
+- **SSL/TLS** → Full (strict)
+- **Always Use HTTPS** → On
+- **Automatic HTTPS Rewrites** → On
+- **Security** → Bot Fight Mode → On (free tier)

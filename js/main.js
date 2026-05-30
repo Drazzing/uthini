@@ -19,6 +19,23 @@
     });
   }
 
+  /* Logo fallback when SVG fails to load (replaces inline onerror handlers) */
+  document.querySelectorAll(".site-logo__img").forEach(function (img) {
+    img.addEventListener("error", function () {
+      img.hidden = true;
+      var fallback = img.nextElementSibling;
+      if (fallback && fallback.classList.contains("site-logo__fallback")) {
+        fallback.hidden = false;
+      }
+    });
+  });
+
+  document.querySelectorAll("img.hero__logo").forEach(function (img) {
+    img.addEventListener("error", function () {
+      img.hidden = true;
+    });
+  });
+
   var toggle = document.querySelector(".nav-toggle");
   var nav = document.querySelector(".main-nav");
   var backdrop = document.querySelector(".nav-backdrop");

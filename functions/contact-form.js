@@ -1,41 +1,85 @@
 /**
  * Contact form handler for Cloudflare Pages Functions.
  *
- * Set environment variables in Cloudflare Pages → Settings → Environment variables:
- *   CONTACT_TO          – comma-separated recipient addresses (required)
- *   CONTACT_FROM        – sender address on your domain, e.g. noreply@uthini.com (required)
- *   CONTACT_FROM_NAME   – optional display name (default: "Uthini Contact")
- *   RESEND_API_KEY      – optional; if set, email is sent via Resend instead of Mailchannels
+ * Environment variables (Cloudflare Pages → Settings → Environment variables):
+ *   CONTACT_TO             – comma-separated recipient addresses (required)
+ *   CONTACT_FROM           – sender on your domain, e.g. noreply@uthini.com (required)
+ *   CONTACT_FROM_NAME      – optional display name (default: "Uthini Contact")
+ *   ALLOWED_ORIGINS        – optional comma-separated origins (default: uthini.com + www)
+ *   RESEND_API_KEY         – optional; sends via Resend instead of Mailchannels
+ *   TURNSTILE_SECRET_KEY   – optional; requires Turnstile widget on contact.html
  */
 
 const LIMITS = { name: 200, email: 254, subject: 300, message: 10000 };
 const RATE_LIMIT = { max: 5, windowSeconds: 900 };
+const MIN_SUBMIT_MS = 3000;
+const MAX_SUBMIT_MS = 3600000;
+const MAX_BODY_BYTES = 32768;
 
 function redirectToContact(params) {
   const qs = new URLSearchParams(params).toString();
   return new Response(null, {
     status: 302,
-    headers: { Location: `/contact.html?${qs}` },
+    headers: {
+      Location: `/contact.html?${qs}`,
+      "Cache-Control": "no-store",
+    },
   });
 }
 
 function sanitize(value) {
   return String(value ?? "")
     .trim()
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
     .replace(/[\r\n]+/g, " ")
     .replace(/<[^>]*>/g, "");
 }
 
+function sanitizeHeaderValue(value) {
+  return sanitize(value).replace(/[<>"\\]/g, "");
+}
+
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= LIMITS.email;
+  if (!email || email.length > LIMITS.email) return false;
+  if (/[\r\n]/.test(email)) return false;
+  return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email);
+}
+
+function parseAllowedOrigins(env) {
+  const defaults = ["https://uthini.com", "https://www.uthini.com"];
+  const custom = (env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return custom.length ? custom : defaults;
+}
+
+function isAllowedRequest(request, env) {
+  const allowed = parseAllowedOrigins(env);
+  const origin = request.headers.get("Origin");
+  const referer = request.headers.get("Referer");
+
+  if (origin) {
+    if (allowed.includes(origin)) return true;
+    if (/^https:\/\/[\w-]+\.pages\.dev$/.test(origin)) return true;
+  }
+
+  if (referer) {
+    try {
+      const ref = new URL(referer);
+      const refOrigin = ref.origin;
+      if (allowed.includes(refOrigin)) return true;
+      if (ref.hostname.endsWith(".pages.dev") && ref.protocol === "https:") return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
 }
 
 function getClientIp(request) {
-  return (
-    request.headers.get("CF-Connecting-IP") ||
-    request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
-    "unknown"
-  );
+  return request.headers.get("CF-Connecting-IP") || "unknown";
 }
 
 async function isRateLimited(ip) {
@@ -54,6 +98,24 @@ async function isRateLimited(ip) {
   return false;
 }
 
+async function verifyTurnstile(token, secret, ip) {
+  const body = new URLSearchParams({
+    secret,
+    response: token,
+    remoteip: ip,
+  });
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  if (!response.ok) return false;
+  const result = await response.json();
+  return result.success === true;
+}
+
 async function sendViaResend(apiKey, { from, fromName, to, replyTo, replyName, subject, body }) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -63,7 +125,10 @@ async function sendViaResend(apiKey, { from, fromName, to, replyTo, replyName, s
     },
     body: JSON.stringify({
       from: `${fromName} <${from}>`,
-      to: to.split(",").map((addr) => addr.trim()).filter(Boolean),
+      to: to
+        .split(",")
+        .map((addr) => addr.trim())
+        .filter(Boolean),
       reply_to: `${replyName} <${replyTo}>`,
       subject,
       text: body,
@@ -93,22 +158,60 @@ async function sendViaMailchannels({ from, fromName, to, replyTo, replyName, sub
   return response.ok;
 }
 
+function isValidSubmissionTiming(rawTs) {
+  const ts = parseInt(String(rawTs ?? ""), 10);
+  if (!Number.isFinite(ts) || ts <= 0) return false;
+  const elapsed = Date.now() - ts;
+  return elapsed >= MIN_SUBMIT_MS && elapsed <= MAX_SUBMIT_MS;
+}
+
 export async function onRequestGet() {
   return new Response(null, {
     status: 302,
-    headers: { Location: "/contact.html" },
+    headers: { Location: "/contact.html", "Cache-Control": "no-store" },
   });
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
 
+  if (!isAllowedRequest(request, env)) {
+    return redirectToContact({ thanks: "0", reason: "validation" });
+  }
+
+  const contentType = request.headers.get("Content-Type") || "";
+  if (
+    !contentType.includes("application/x-www-form-urlencoded") &&
+    !contentType.includes("multipart/form-data")
+  ) {
+    return redirectToContact({ thanks: "0", reason: "validation" });
+  }
+
+  const contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    return redirectToContact({ thanks: "0", reason: "validation" });
+  }
+
+  const ip = getClientIp(request);
+  if (await isRateLimited(ip)) {
+    return redirectToContact({ thanks: "0", reason: "send" });
+  }
+
   const to = env.CONTACT_TO;
   const from = env.CONTACT_FROM;
-  const fromName = env.CONTACT_FROM_NAME || "Uthini Contact";
+  const fromName = sanitizeHeaderValue(env.CONTACT_FROM_NAME || "Uthini Contact");
 
-  if (!to || !from) {
-    console.error("[contact-form] CONTACT_TO or CONTACT_FROM not configured");
+  if (!to || !from || !isValidEmail(from)) {
+    console.error("[contact-form] CONTACT_TO or CONTACT_FROM misconfigured");
+    return redirectToContact({ thanks: "0", reason: "send" });
+  }
+
+  const recipients = to
+    .split(",")
+    .map((addr) => addr.trim())
+    .filter(Boolean);
+  if (!recipients.length || recipients.some((addr) => !isValidEmail(addr))) {
+    console.error("[contact-form] CONTACT_TO contains invalid addresses");
     return redirectToContact({ thanks: "0", reason: "send" });
   }
 
@@ -119,25 +222,33 @@ export async function onRequestPost(context) {
     return redirectToContact({ thanks: "0", reason: "validation" });
   }
 
-  if (sanitize(formData.get("website"))) {
+  if (formData.get("website") || formData.get("url")) {
     return redirectToContact({ thanks: "0", reason: "validation" });
   }
 
-  const name = sanitize(formData.get("name")).slice(0, LIMITS.name);
+  if (!isValidSubmissionTiming(formData.get("_ts"))) {
+    return redirectToContact({ thanks: "0", reason: "validation" });
+  }
+
+  if (env.TURNSTILE_SECRET_KEY) {
+    const token = String(formData.get("cf-turnstile-response") ?? "");
+    const ip = getClientIp(request);
+    const valid = token && (await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, ip));
+    if (!valid) {
+      return redirectToContact({ thanks: "0", reason: "validation" });
+    }
+  }
+
+  const name = sanitizeHeaderValue(formData.get("name")).slice(0, LIMITS.name);
   const email = sanitize(formData.get("email")).slice(0, LIMITS.email);
-  const subject = sanitize(formData.get("subject")).slice(0, LIMITS.subject);
+  const subject = sanitizeHeaderValue(formData.get("subject")).slice(0, LIMITS.subject);
   const message = sanitize(formData.get("message")).slice(0, LIMITS.message);
 
   if (!name || !email || !message || !isValidEmail(email)) {
     return redirectToContact({ thanks: "0", reason: "validation" });
   }
 
-  const ip = getClientIp(request);
-  if (await isRateLimited(ip)) {
-    return redirectToContact({ thanks: "0", reason: "send" });
-  }
-
-  const subjectLine = `Uthini Solutions: ${subject || "Enquiry"}`;
+  const subjectLine = `Uthini Solutions: ${subject || "Enquiry"}`.slice(0, 400);
   const body = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
 
   let sent = false;

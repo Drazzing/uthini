@@ -1,9 +1,9 @@
 /**
- * Contact page: show thanks or error message when redirected after form submit;
- * show "Sending..." and disable button while form is submitting.
+ * Contact page: thanks/error states, submit UX, timing honeypot, optional Turnstile.
  */
 (function () {
   "use strict";
+
   var params = new URLSearchParams(window.location.search);
   var thanksEl = document.getElementById("form-thanks");
   var errorEl = document.getElementById("form-error");
@@ -14,6 +14,7 @@
   var submitBtn = document.getElementById("contact-submit-btn");
   var submitText = submitBtn && submitBtn.querySelector(".cta__text");
   var submitSpinner = submitBtn && submitBtn.querySelector(".cta__spinner");
+  var tsField = document.getElementById("contact-ts");
 
   if (params.get("thanks") === "1") {
     if (thanksEl) thanksEl.hidden = false;
@@ -28,10 +29,37 @@
     var reason = params.get("reason");
     var msgEl = document.getElementById("form-error-msg");
     if (msgEl && reason === "send") {
-      msgEl.textContent = "We couldn't send your message. Please try again later or email us directly.";
+      msgEl.textContent =
+        "We couldn't send your message. Please try again later or email us directly.";
     } else if (msgEl) {
-      msgEl.textContent = "Please check the required fields (name, email, message) and try again.";
+      msgEl.textContent =
+        "Please check the required fields (name, email, message) and try again.";
     }
+  }
+
+  if (params.has("thanks") && window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  if (tsField) {
+    tsField.value = String(Date.now());
+  }
+
+  var turnstileMeta = document.querySelector('meta[name="turnstile-site-key"]');
+  var turnstileSiteKey = turnstileMeta && turnstileMeta.getAttribute("content");
+  var turnstileMount = document.getElementById("turnstile-widget");
+
+  if (turnstileSiteKey && turnstileMount) {
+    var turnstileScript = document.createElement("script");
+    turnstileScript.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    turnstileScript.async = true;
+    turnstileScript.defer = true;
+    document.head.appendChild(turnstileScript);
+
+    var turnstileDiv = document.createElement("div");
+    turnstileDiv.className = "cf-turnstile";
+    turnstileDiv.setAttribute("data-sitekey", turnstileSiteKey);
+    turnstileMount.appendChild(turnstileDiv);
   }
 
   if (formEl && submitBtn) {
@@ -39,9 +67,7 @@
       submitBtn.disabled = true;
       submitBtn.setAttribute("aria-busy", "true");
       if (submitText) submitText.textContent = "Sending…";
-      if (submitSpinner) {
-        submitSpinner.hidden = false;
-      }
+      if (submitSpinner) submitSpinner.hidden = false;
       formEl.classList.add("is-sending");
     });
   }
