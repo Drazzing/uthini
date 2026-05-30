@@ -64,12 +64,12 @@
       </div>
 
       <form id="contact-form" class="contact-form" action="/contact-form" method="post" novalidate>
-        <!-- Honeypot fields: leave empty; bots often fill visible-looking traps -->
-        <div class="visually-hidden" aria-hidden="true">
-          <label for="contact-website">Website</label>
-          <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
-          <label for="contact-url">URL</label>
-          <input type="text" id="contact-url" name="url" tabindex="-1" autocomplete="off">
+        <!-- Honeypot: hidden from users; must stay empty -->
+        <div class="honeypot" hidden aria-hidden="true">
+          <label for="contact-gotcha">Leave blank</label>
+          <input type="text" id="contact-gotcha" name="_gotcha" tabindex="-1" autocomplete="off">
+          <label for="contact-fax">Leave blank</label>
+          <input type="text" id="contact-fax" name="_fax" tabindex="-1" autocomplete="off">
         </div>
         <input type="hidden" id="contact-ts" name="_ts" value="">
         <div class="form-group">

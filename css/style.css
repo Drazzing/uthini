@@ -792,6 +792,10 @@ button.cta[type="submit"],
 }
 
 /* ========== Utility ========== */
+.honeypot {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

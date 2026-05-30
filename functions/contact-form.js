@@ -54,6 +54,10 @@ function parseAllowedOrigins(env) {
   return custom.length ? custom : defaults;
 }
 
+function isPagesPreviewHost(hostname) {
+  return hostname === "pages.dev" || hostname.endsWith(".pages.dev");
+}
+
 function isAllowedRequest(request, env) {
   const allowed = parseAllowedOrigins(env);
   const origin = request.headers.get("Origin");
@@ -61,15 +65,18 @@ function isAllowedRequest(request, env) {
 
   if (origin) {
     if (allowed.includes(origin)) return true;
-    if (/^https:\/\/[\w-]+\.pages\.dev$/.test(origin)) return true;
+    try {
+      if (isPagesPreviewHost(new URL(origin).hostname)) return true;
+    } catch {
+      /* ignore invalid origin */
+    }
   }
 
   if (referer) {
     try {
       const ref = new URL(referer);
-      const refOrigin = ref.origin;
-      if (allowed.includes(refOrigin)) return true;
-      if (ref.hostname.endsWith(".pages.dev") && ref.protocol === "https:") return true;
+      if (allowed.includes(ref.origin)) return true;
+      if (ref.protocol === "https:" && isPagesPreviewHost(ref.hostname)) return true;
     } catch {
       return false;
     }
@@ -155,6 +162,10 @@ async function sendViaMailchannels({ from, fromName, to, replyTo, replyName, sub
       content: [{ type: "text/plain", value: body }],
     }),
   });
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("[contact-form] Mailchannels error:", response.status, detail);
+  }
   return response.ok;
 }
 
@@ -222,7 +233,7 @@ export async function onRequestPost(context) {
     return redirectToContact({ thanks: "0", reason: "validation" });
   }
 
-  if (formData.get("website") || formData.get("url")) {
+  if (formData.get("_gotcha") || formData.get("_fax")) {
     return redirectToContact({ thanks: "0", reason: "validation" });
   }
 
