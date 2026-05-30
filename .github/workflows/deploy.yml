@@ -1,33 +1,59 @@
-# Deploy to GoDaddy via FTP when you push to main.
-# Repository secrets (Settings → Secrets and variables → Actions): FTP_SERVER, FTP_USERNAME, FTP_PASSWORD.
+# Publish uthini.com to Cloudflare Pages on push to main.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   – API token with "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID  – Account ID from Workers & Pages sidebar
+#
+# Optional variable (Settings → Variables → Actions):
+#   CLOUDFLARE_PAGES_PROJECT – defaults to "uthini"
 
-name: Deploy to GoDaddy
+name: Publish site
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: publish-site
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Deploy site via FTP
+  build:
+    name: Build site
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare deploy folder
-        run: |
-          mkdir -p deploy
-          cp -r css js images deploy/
-          cp *.html *.php *.xml *.txt deploy/ 2>/dev/null || true
-          ls -la deploy/
+      - name: Build deploy folder
+        run: bash scripts/prepare-deploy.sh
 
-      - name: Deploy to GoDaddy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./deploy/
-          server-dir: /
+          name: site
+          path: dist/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=uthini --commit-dirty=true

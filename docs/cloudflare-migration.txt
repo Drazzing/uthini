@@ -1,0 +1,172 @@
+; =============================================================================
+; uthini.com — Cloudflare migration reference
+; Updated: 2026-05-30
+; =============================================================================
+;
+; USE THIS AS A CHECKLIST — Cloudflare does not import BIND zone files directly.
+; Add records in: Cloudflare dashboard → uthini.com → DNS → Records
+;
+; =============================================================================
+; STEP 1 — NAMESERVERS (at GoDaddy registrar, not in DNS records)
+; =============================================================================
+;
+; REMOVE at GoDaddy:
+;   ns29.domaincontrol.com
+;   ns30.domaincontrol.com
+;
+; ADD at GoDaddy:
+;   glen.ns.cloudflare.com
+;   priscilla.ns.cloudflare.com
+;
+; Wait until Cloudflare shows domain status: Active
+;
+; =============================================================================
+; STEP 2 — DELETE ALL OLD RECORDS in Cloudflare DNS
+; =============================================================================
+;
+; Remove everything imported from GoDaddy. None of these are needed:
+;
+; --- REMOVED: GoDaddy web hosting ---
+; @           A       Parked / 15.197.148.33 / 3.33.130.190
+; wobblegone  A       50.63.8.217                    (old GoDaddy sub-site)
+; ftp         CNAME   @
+; _domainconnect CNAME _domainconnect.gd.domaincontrol.com
+;
+; --- REMOVED: GoDaddy email (unused) ---
+; e, email, imap, pop, smtp, mail, webmail, mobilemail, pda
+;   → all pointed at secureserver.net
+;
+; --- REMOVED: Microsoft 365 / Outlook (unused) ---
+; MX          @       uthini-com.mail.protection.outlook.com
+; autodiscover CNAME  autodiscover.outlook.com
+; lyncdiscover CNAME  webdir.online.lync.com
+; sip         CNAME   sipdir.online.lync.com
+; msoid       CNAME   clientconfig.microsoftonline-p.net
+; _sip._tls._tcp        SRV  sipdir.online.lync.com
+; _sipfederationtls._tcp SRV sipfed.online.lync.com
+; TXT @       "NETORGFT9851306.onmicrosoft.com"
+;
+; --- REMOVED: Old email authentication ---
+; TXT @       "v=spf1 include:secureserver.net -all"
+; TXT _dmarc  "v=DMARC1; p=none; ..."
+;
+; --- REMOVED: Old www (Pages will replace) ---
+; www         CNAME   @
+;
+; =============================================================================
+; STEP 3 — CLOUDFLARE PAGES (deploy website files from GitHub)
+; =============================================================================
+;
+; Dashboard → Workers & Pages → Create → Pages → Connect to Git
+;   Repository:  Drazzing/uthini
+;   Branch:      main
+;   Build command:        bash scripts/prepare-deploy.sh
+;   Build output dir:     dist
+;
+; Then: Pages project → Custom domains → Add:
+;   uthini.com
+;   www.uthini.com
+;
+; Cloudflare AUTO-CREATES these DNS records when you add custom domains:
+;   uthini.com   → CNAME to <project>.pages.dev   (Proxied)
+;   www          → CNAME to <project>.pages.dev   (Proxied)
+;
+; Do NOT add A records manually for the main site — let Pages do it.
+;
+; --- FILES DEPLOYED TO CLOUDFLARE PAGES (via prepare-deploy.sh) ---
+;
+; dist/
+;   about.html
+;   contact.html
+;   index.html
+;   orchestrator.html
+;   services.html
+;   software.html
+;   terms.html
+;   robots.txt
+;   sitemap.xml
+;   _headers
+;   _redirects
+;   css/variables.css
+;   css/style.css
+;   js/main.js
+;   js/contact.js
+;   images/logo.svg
+;   functions/contact-form.js
+;
+; NOT in repo / not published:
+;   branding/  (source assets only)
+;
+; =============================================================================
+; STEP 4 — ADD THESE DNS RECORDS MANUALLY (contact form email)
+; =============================================================================
+;
+; Replace YOUR_CLOUDFLARE_ACCOUNT_ID with:
+;   Dashboard → Workers & Pages → right sidebar → Account ID
+;
+; Type   Name            Content                                      Proxy
+; ----   ----            -------                                      -----
+; TXT    _mailchannels   v=mc1 cf_id=YOUR_CLOUDFLARE_ACCOUNT_ID        DNS only
+; TXT    @               v=spf1 include:relay.mailchannels.net ~all   DNS only
+;
+; =============================================================================
+; STEP 5 — PAGES ENVIRONMENT VARIABLES
+; =============================================================================
+;
+; Pages project → Settings → Environment variables → Production:
+;
+;   CONTACT_TO          shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com
+;   CONTACT_FROM        noreply@uthini.com
+;   CONTACT_FROM_NAME   Uthini Contact
+;
+; Optional (alternative to Mailchannels):
+;   RESEND_API_KEY      re_xxxxxxxx  (from resend.com — verify domain first)
+;
+; =============================================================================
+; STEP 6 — GITHUB ACTIONS (optional, if not using Pages Git integration)
+; =============================================================================
+;
+; GitHub repo → Settings → Secrets → Actions:
+;   CLOUDFLARE_API_TOKEN   (token with Cloudflare Pages: Edit)
+;   CLOUDFLARE_ACCOUNT_ID  (same Account ID as above)
+;
+; Push to main triggers .github/workflows/deploy.yml
+;
+; =============================================================================
+; STEP 7 — VERIFY AFTER GO-LIVE
+; =============================================================================
+;
+; [ ] https://uthini.com loads
+; [ ] https://www.uthini.com loads
+; [ ] All pages work (about, services, contact, software, terms)
+; [ ] Contact form submits → redirects to contact.html?thanks=1
+; [ ] Email arrives at Gmail inboxes
+; [ ] Cancel GoDaddy hosting (keep domain registration at GoDaddy if desired)
+;
+; =============================================================================
+; OPTIONAL — wobblegone.uthini.com
+; =============================================================================
+;
+; Old record: wobblegone A 50.63.8.217 (GoDaddy hosting)
+; If you still need this subdomain, deploy it separately on Cloudflare Pages
+; or Workers and add a CNAME:
+;   wobblegone  CNAME  <that-project>.pages.dev   Proxied
+; Otherwise leave it deleted.
+;
+; =============================================================================
+; CLOUDFLARE DNS — FINAL STATE (after Steps 2–4)
+; =============================================================================
+
+$ORIGIN uthini.com.
+
+; --- Auto-added by Cloudflare Pages (do not create manually) ---
+; @       CNAME   uthini.pages.dev.          ; Proxied — created by Pages
+; www     CNAME   uthini.pages.dev.          ; Proxied — created by Pages
+
+; --- Add manually for contact form ---
+@               3600    IN      TXT     "v=spf1 include:relay.mailchannels.net ~all"
+_mailchannels   3600    IN      TXT     "v=mc1 cf_id=YOUR_CLOUDFLARE_ACCOUNT_ID"
+
+; --- Nameservers (managed at registrar, not as DNS records) ---
+; glen.ns.cloudflare.com
+; priscilla.ns.cloudflare.com
