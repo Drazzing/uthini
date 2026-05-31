@@ -7,12 +7,12 @@
  *   CONTACT_FROM_NAME      – optional display name (default: "Uthini Contact")
  *   ALLOWED_ORIGINS        – optional comma-separated origins (default: uthini.com + www)
  *   RESEND_API_KEY         – optional; sends via Resend instead of Mailchannels
- *   TURNSTILE_SECRET_KEY   – optional; requires Turnstile widget on contact.html
+ *   TURNSTILE_SECRET_KEY   – optional; only set if Turnstile widget is enabled on contact.html
  */
 
 const LIMITS = { name: 200, email: 254, subject: 300, message: 10000 };
 const RATE_LIMIT = { max: 5, windowSeconds: 900 };
-const MIN_SUBMIT_MS = 3000;
+const MIN_SUBMIT_MS = 800;
 const MAX_SUBMIT_MS = 3600000;
 const MAX_BODY_BYTES = 32768;
 
@@ -25,6 +25,11 @@ function redirectToContact(params) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+function rejectValidation(logReason, userReason = "validation") {
+  console.error("[contact-form] validation failed:", logReason);
+  return redirectToContact({ thanks: "0", reason: userReason });
 }
 
 function sanitize(value) {
@@ -58,7 +63,22 @@ function isPagesPreviewHost(hostname) {
   return hostname === "pages.dev" || hostname.endsWith(".pages.dev");
 }
 
+function isAllowedHost(hostname) {
+  const host = hostname.toLowerCase();
+  return host === "uthini.com" || host === "www.uthini.com" || isPagesPreviewHost(host);
+}
+
 function isAllowedRequest(request, env) {
+  const secFetchSite = request.headers.get("Sec-Fetch-Site");
+  if (secFetchSite === "same-origin") {
+    return true;
+  }
+
+  const host = (request.headers.get("Host") || "").split(":")[0];
+  if (isAllowedHost(host) && secFetchSite !== "cross-site") {
+    return true;
+  }
+
   const allowed = parseAllowedOrigins(env);
   const origin = request.headers.get("Origin");
   const referer = request.headers.get("Referer");
@@ -141,6 +161,9 @@ async function sendViaResend(apiKey, { from, fromName, to, replyTo, replyName, s
       text: body,
     }),
   });
+  if (!response.ok) {
+    console.error("[contact-form] Resend error:", response.status, await response.text());
+  }
   return response.ok;
 }
 
@@ -163,15 +186,16 @@ async function sendViaMailchannels({ from, fromName, to, replyTo, replyName, sub
     }),
   });
   if (!response.ok) {
-    const detail = await response.text();
-    console.error("[contact-form] Mailchannels error:", response.status, detail);
+    console.error("[contact-form] Mailchannels error:", response.status, await response.text());
   }
   return response.ok;
 }
 
 function isValidSubmissionTiming(rawTs) {
   const ts = parseInt(String(rawTs ?? ""), 10);
-  if (!Number.isFinite(ts) || ts <= 0) return false;
+  if (!Number.isFinite(ts) || ts <= 0) {
+    return false;
+  }
   const elapsed = Date.now() - ts;
   return elapsed >= MIN_SUBMIT_MS && elapsed <= MAX_SUBMIT_MS;
 }
@@ -187,20 +211,21 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   if (!isAllowedRequest(request, env)) {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+    return rejectValidation("origin");
   }
 
   const contentType = request.headers.get("Content-Type") || "";
   if (
+    contentType &&
     !contentType.includes("application/x-www-form-urlencoded") &&
     !contentType.includes("multipart/form-data")
   ) {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+    return rejectValidation("content-type");
   }
 
   const contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
   if (contentLength > MAX_BODY_BYTES) {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+    return rejectValidation("body-size");
   }
 
   const ip = getClientIp(request);
@@ -230,23 +255,22 @@ export async function onRequestPost(context) {
   try {
     formData = await request.formData();
   } catch {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+    return rejectValidation("form-data");
   }
 
-  if (formData.get("_gotcha") || formData.get("_fax")) {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+  if (sanitize(formData.get("_gotcha")) || sanitize(formData.get("_fax"))) {
+    return rejectValidation("honeypot");
   }
 
   if (!isValidSubmissionTiming(formData.get("_ts"))) {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+    return rejectValidation("timing", "timing");
   }
 
   if (env.TURNSTILE_SECRET_KEY) {
     const token = String(formData.get("cf-turnstile-response") ?? "");
-    const ip = getClientIp(request);
     const valid = token && (await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, ip));
     if (!valid) {
-      return redirectToContact({ thanks: "0", reason: "validation" });
+      return rejectValidation("turnstile");
     }
   }
 
@@ -256,7 +280,7 @@ export async function onRequestPost(context) {
   const message = sanitize(formData.get("message")).slice(0, LIMITS.message);
 
   if (!name || !email || !message || !isValidEmail(email)) {
-    return redirectToContact({ thanks: "0", reason: "validation" });
+    return rejectValidation("fields");
   }
 
   const subjectLine = `Uthini Solutions: ${subject || "Enquiry"}`.slice(0, 400);

@@ -31,6 +31,9 @@
     if (msgEl && reason === "send") {
       msgEl.textContent =
         "We couldn't send your message. Please try again later or email us directly.";
+    } else if (msgEl && reason === "timing") {
+      msgEl.textContent =
+        "That was a little too fast — please wait a moment, then try again.";
     } else if (msgEl) {
       msgEl.textContent =
         "Please check the required fields (name, email, message) and try again.";
@@ -43,6 +46,14 @@
 
   if (tsField) {
     tsField.value = String(Date.now());
+  }
+
+  if (formEl && tsField) {
+    formEl.addEventListener("focusin", function () {
+      if (!tsField.value) {
+        tsField.value = String(Date.now());
+      }
+    });
   }
 
   var turnstileMeta = document.querySelector('meta[name="turnstile-site-key"]');
