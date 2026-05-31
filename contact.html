@@ -37,6 +37,7 @@
           <li><a href="index.html">Home</a></li>
           <li><a href="about.html">About</a></li>
           <li><a href="services.html">Services</a></li>
+          <li><a href="ai.html">AI</a></li>
           <li class="nav-item--has-sub">
             <a href="software.html">Software</a>
             <ul class="nav-sub">
@@ -53,7 +54,7 @@
   <main id="main-content">
     <section class="section section--form section--reveal">
       <h1 class="section__title">Contact Us</h1>
-      <p id="contact-intro">Ready to start a project or have a question? Required fields are marked with <span class="required" aria-hidden="true">*</span>; everything else is optional.</p>
+      <p id="contact-intro">Send us a message below. Fields marked <span class="required" aria-hidden="true">*</span> are required.</p>
 
       <div id="form-thanks" class="form-thanks" hidden>
         <p class="form-thanks__message">Thanks for getting in touch. We'll respond shortly.</p>
@@ -79,33 +80,37 @@
           <label for="contact-email">Email <span class="required" aria-hidden="true">*</span></label>
           <input type="email" id="contact-email" name="email" required maxlength="254" autocomplete="email" placeholder="your@email.com">
         </div>
+        <div class="form-group">
+          <label for="contact-enquiry">Topic</label>
+          <select id="contact-enquiry" name="enquiry">
+            <option value="">General enquiry</option>
+            <option value="general">General</option>
+            <option value="consulting">Consulting</option>
+            <option value="development">Development</option>
+            <option value="design">Design</option>
+            <option value="software">Software / Orchestrator</option>
+            <option value="ai">AI &amp; technology</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="contact-subject">Subject</label>
+          <input type="text" id="contact-subject" name="subject" maxlength="300" autocomplete="off" placeholder="e.g. Project enquiry">
+        </div>
+        <div class="form-group">
+          <label for="contact-message">Message <span class="required" aria-hidden="true">*</span></label>
+          <textarea id="contact-message" name="message" required maxlength="10000" rows="5" placeholder="Tell us about your project or question."></textarea>
+        </div>
 
-        <fieldset class="form-optional">
-          <legend class="form-optional__legend">Additional details <span class="form-optional__hint">(all optional)</span></legend>
-
-          <div class="form-row form-row--2">
+        <details class="form-optional">
+          <summary class="form-optional__summary">Add optional details</summary>
+          <div class="form-optional__body">
             <div class="form-group">
-              <label for="contact-company">Company or organisation</label>
-              <input type="text" id="contact-company" name="company" maxlength="200" autocomplete="organization" placeholder="e.g. Acme Pty Ltd">
+              <label for="contact-company">Company</label>
+              <input type="text" id="contact-company" name="company" maxlength="200" autocomplete="organization" placeholder="Your organisation">
             </div>
             <div class="form-group">
               <label for="contact-phone">Phone</label>
-              <input type="tel" id="contact-phone" name="phone" maxlength="30" autocomplete="tel" placeholder="e.g. 04xx xxx xxx">
-            </div>
-          </div>
-
-          <div class="form-row form-row--2">
-            <div class="form-group">
-              <label for="contact-enquiry">What is this about?</label>
-              <select id="contact-enquiry" name="enquiry">
-                <option value="">Choose a topic</option>
-                <option value="general">General enquiry</option>
-                <option value="consulting">Consulting</option>
-                <option value="development">Development</option>
-                <option value="design">Design</option>
-                <option value="software">Software / Orchestrator</option>
-                <option value="ai">AI &amp; technology</option>
-              </select>
+              <input type="tel" id="contact-phone" name="phone" maxlength="30" autocomplete="tel" placeholder="04xx xxx xxx">
             </div>
             <div class="form-group">
               <label for="contact-pref">Preferred contact</label>
@@ -117,16 +122,8 @@
               </select>
             </div>
           </div>
-        </fieldset>
+        </details>
 
-        <div class="form-group">
-          <label for="contact-subject">Subject</label>
-          <input type="text" id="contact-subject" name="subject" maxlength="300" autocomplete="off" placeholder="e.g. Project enquiry">
-        </div>
-        <div class="form-group">
-          <label for="contact-message">Message <span class="required" aria-hidden="true">*</span></label>
-          <textarea id="contact-message" name="message" required maxlength="10000" rows="5" placeholder="Tell us about your project or question."></textarea>
-        </div>
         <button type="submit" class="cta cta--submit" id="contact-submit-btn" aria-live="polite">
           <span class="cta__text">Send message</span>
           <span class="cta__spinner" aria-hidden="true" hidden></span>
@@ -155,6 +152,7 @@
       <nav aria-label="Footer navigation">
         <a href="about.html">About</a>
         <a href="services.html">Services</a>
+        <a href="ai.html">AI</a>
         <a href="software.html">Software</a>
         <a href="contact.html">Contact Us</a>
       </nav>
