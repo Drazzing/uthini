@@ -28,7 +28,7 @@ Push to `main` runs **Publish site** (`.github/workflows/deploy.yml`).
 
 ```bash
 bash scripts/prepare-deploy.sh
-npx wrangler pages dev dist
+npx wrangler@4 pages dev dist
 ```
 
 `.dev.vars` (gitignored): `CONTACT_TO`, `CONTACT_FROM`.
@@ -50,3 +50,7 @@ npx wrangler pages dev dist
 Headers in `_headers` (static) and `functions/_middleware.js` (form responses) — keep CSP in sync.
 
 Contact form: origin check, rate limit, honeypots, sanitization. Recipients only in Cloudflare env vars.
+
+### Google search
+
+Site allows indexing; you must verify in **Google Search Console** and submit the sitemap. See `docs/google-search.md`.

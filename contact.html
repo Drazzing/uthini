@@ -6,6 +6,8 @@
   <title>Contact Us – Uthini Solutions</title>
   <meta name="description" content="Contact Uthini Solutions. Send a message for consulting, development, and design enquiries. We respond quickly.">
   <meta name="author" content="Uthini Solutions">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://uthini.com/contact.html">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
@@ -14,7 +16,8 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://uthini.com/contact.html">
   <meta property="og:image" content="https://uthini.com/images/og-image.png">
-  <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/images/favicon.svg">
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -50,11 +53,10 @@
   <main id="main-content">
     <section class="section section--form section--reveal">
       <h1 class="section__title">Contact Us</h1>
-      <p id="contact-intro">Ready to start a project or have a question? Send a message and we'll respond as soon as we can.</p>
+      <p id="contact-intro">Ready to start a project or have a question? Required fields are marked with <span class="required" aria-hidden="true">*</span>; everything else is optional.</p>
 
       <div id="form-thanks" class="form-thanks" hidden>
         <p class="form-thanks__message">Thanks for getting in touch. We'll respond shortly.</p>
-        <a href="index.html" class="cta">Back to home</a>
       </div>
 
       <div id="form-error" class="form-thanks form-thanks--error" hidden role="alert">
@@ -77,6 +79,46 @@
           <label for="contact-email">Email <span class="required" aria-hidden="true">*</span></label>
           <input type="email" id="contact-email" name="email" required maxlength="254" autocomplete="email" placeholder="your@email.com">
         </div>
+
+        <fieldset class="form-optional">
+          <legend class="form-optional__legend">Additional details <span class="form-optional__hint">(all optional)</span></legend>
+
+          <div class="form-row form-row--2">
+            <div class="form-group">
+              <label for="contact-company">Company or organisation</label>
+              <input type="text" id="contact-company" name="company" maxlength="200" autocomplete="organization" placeholder="e.g. Acme Pty Ltd">
+            </div>
+            <div class="form-group">
+              <label for="contact-phone">Phone</label>
+              <input type="tel" id="contact-phone" name="phone" maxlength="30" autocomplete="tel" placeholder="e.g. 04xx xxx xxx">
+            </div>
+          </div>
+
+          <div class="form-row form-row--2">
+            <div class="form-group">
+              <label for="contact-enquiry">What is this about?</label>
+              <select id="contact-enquiry" name="enquiry">
+                <option value="">Choose a topic</option>
+                <option value="general">General enquiry</option>
+                <option value="consulting">Consulting</option>
+                <option value="development">Development</option>
+                <option value="design">Design</option>
+                <option value="software">Software / Orchestrator</option>
+                <option value="ai">AI &amp; technology</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="contact-pref">Preferred contact</label>
+              <select id="contact-pref" name="contact_pref">
+                <option value="">No preference</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="either">Email or phone</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
         <div class="form-group">
           <label for="contact-subject">Subject</label>
           <input type="text" id="contact-subject" name="subject" maxlength="300" autocomplete="off" placeholder="e.g. Project enquiry">

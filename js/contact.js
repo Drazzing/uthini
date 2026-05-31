@@ -10,7 +10,6 @@
   var formEl = document.getElementById("contact-form");
   var metaEl = document.querySelector(".section__meta");
   var introEl = document.getElementById("contact-intro");
-  var backLink = document.getElementById("contact-back-link");
   var submitBtn = document.getElementById("contact-submit-btn");
   var submitText = submitBtn && submitBtn.querySelector(".cta__text");
   var submitSpinner = submitBtn && submitBtn.querySelector(".cta__spinner");
@@ -21,7 +20,6 @@
     if (formEl) formEl.hidden = true;
     if (metaEl) metaEl.hidden = true;
     if (introEl) introEl.hidden = true;
-    if (backLink) backLink.hidden = true;
   } else if (params.get("thanks") === "0") {
     if (errorEl) errorEl.hidden = false;
     if (thanksEl) thanksEl.hidden = true;
@@ -30,6 +28,9 @@
     if (msgEl && reason === "send") {
       msgEl.textContent =
         "We couldn't send your message. Please try again later or email us directly.";
+    } else if (msgEl && reason === "phone") {
+      msgEl.textContent =
+        "Please enter a valid phone number, or leave the phone field blank.";
     } else if (msgEl) {
       msgEl.textContent =
         "Please check the required fields (name, email, message) and try again.";

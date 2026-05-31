@@ -4,7 +4,29 @@
  * Env: CONTACT_TO, CONTACT_FROM, CONTACT_FROM_NAME
  */
 
-const LIMITS = { name: 200, email: 254, subject: 300, message: 10000 };
+const LIMITS = {
+  name: 200,
+  email: 254,
+  subject: 300,
+  message: 10000,
+  company: 200,
+  phone: 30,
+};
+const ENQUIRY_VALUES = new Set(["", "general", "consulting", "development", "design", "software", "ai"]);
+const CONTACT_PREF_VALUES = new Set(["", "email", "phone", "either"]);
+const ENQUIRY_LABELS = {
+  general: "General enquiry",
+  consulting: "Consulting",
+  development: "Development",
+  design: "Design",
+  software: "Software / Orchestrator",
+  ai: "AI & technology",
+};
+const CONTACT_PREF_LABELS = {
+  email: "Email",
+  phone: "Phone",
+  either: "Email or phone",
+};
 const RATE_LIMIT = { max: 5, windowSeconds: 900 };
 const MAX_BODY_BYTES = 32768;
 const SITE_ORIGINS = new Set(["https://uthini.com", "https://www.uthini.com"]);
@@ -42,6 +64,30 @@ function isValidEmail(email) {
   if (!email || email.length > LIMITS.email) return false;
   if (/[\r\n]/.test(email)) return false;
   return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email);
+}
+
+function isValidPhone(phone) {
+  if (!phone) return true;
+  if (phone.length > LIMITS.phone) return false;
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 6 && /^[\d\s()+.\-]+$/.test(phone);
+}
+
+function readOptional(formData, name, maxLen, allowed) {
+  const value = sanitize(formData.get(name));
+  if (!value) return "";
+  if (allowed && !allowed.has(value)) return "";
+  return value.slice(0, maxLen);
+}
+
+function buildEmailBody({ name, email, company, phone, enquiry, contactPref, message }) {
+  const lines = [`Name: ${name}`, `Email: ${email}`];
+  if (company) lines.push(`Company: ${company}`);
+  if (phone) lines.push(`Phone: ${phone}`);
+  if (enquiry) lines.push(`Enquiry type: ${ENQUIRY_LABELS[enquiry] || enquiry}`);
+  if (contactPref) lines.push(`Preferred contact: ${CONTACT_PREF_LABELS[contactPref] || contactPref}`);
+  lines.push("", "Message:", message);
+  return lines.join("\n");
 }
 
 function isPreviewHost(hostname) {
@@ -173,13 +219,21 @@ export async function onRequestPost(context) {
   const email = sanitize(formData.get("email")).slice(0, LIMITS.email);
   const subject = sanitize(formData.get("subject")).slice(0, LIMITS.subject);
   const message = sanitize(formData.get("message")).slice(0, LIMITS.message);
+  const company = readOptional(formData, "company", LIMITS.company);
+  const phone = readOptional(formData, "phone", LIMITS.phone);
+  const enquiry = readOptional(formData, "enquiry", 32, ENQUIRY_VALUES);
+  const contactPref = readOptional(formData, "contact_pref", 16, CONTACT_PREF_VALUES);
 
   if (!name || !email || !message || !isValidEmail(email)) {
     return rejectValidation("fields");
   }
 
+  if (!isValidPhone(phone)) {
+    return rejectValidation("phone");
+  }
+
   const subjectLine = `Uthini Solutions: ${subject || "Enquiry"}`.slice(0, 400);
-  const body = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
+  const body = buildEmailBody({ name, email, company, phone, enquiry, contactPref, message });
 
   let sent = false;
   if (!env.EMAIL_WORKER) {

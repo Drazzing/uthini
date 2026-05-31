@@ -1,1 +1,4 @@
 /contact-form.php /contact-form 301
+/index.html / 301
+https://www.uthini.com/* https://uthini.com/:splat 301
+/favicon.ico /images/favicon.svg 302
