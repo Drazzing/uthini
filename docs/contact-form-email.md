@@ -33,7 +33,7 @@ Each push to `main` deploys:
 1. **`uthini-contact-email`** worker (`workers/contact-email/`)
 2. **Pages site** with service binding to that worker
 
-GitHub secret `CLOUDFLARE_API_TOKEN` must include **Workers Scripts → Edit** and **Workers Services → Edit** (not Pages-only). See README → Publish.
+GitHub secret `CLOUDFLARE_API_TOKEN` must include **Workers Scripts → Edit** and **Cloudflare Pages → Edit** (not Pages-only). See README → Publish.
 
 You do **not** add Bindings in the dashboard — `wrangler.toml` handles it:
 
