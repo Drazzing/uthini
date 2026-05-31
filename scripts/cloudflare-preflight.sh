@@ -46,20 +46,25 @@ if [ "$account_code" != "200" ]; then
   exit 1
 fi
 
-# --- Workers ---
-workers_body="${tmpdir}/workers.json"
-workers_code="$(cf_get_status "${CF_ACCOUNT_API}/workers/scripts/${WORKER_NAME}" "$workers_body")"
+# --- Workers permission (list scripts — single-worker GET can 500 for service workers) ---
+echo "Checking Workers permission..."
+workers_body="${tmpdir}/workers-list.json"
+workers_code="$(cf_get_status "${CF_ACCOUNT_API}/workers/scripts" "$workers_body")"
 case "$workers_code" in
-  200|404) ;;
+  200)
+    echo "Workers Scripts API access OK."
+    ;;
   403|401)
     cf_github_error "Add Workers Scripts → Edit to your API token."
     cat "$workers_body"
     exit 1
     ;;
+  500|502|503|520)
+    echo "::warning::Workers API returned HTTP ${workers_code} (often a Cloudflare-side issue). Skipping Workers pre-check; deploy step will validate."
+    ;;
   *)
-    cf_github_error "Unexpected Workers API response (HTTP ${workers_code})."
-    cat "$workers_body"
-    exit 1
+    echo "::warning::Workers API returned HTTP ${workers_code}. Skipping Workers pre-check; deploy step will validate."
+    cat "$workers_body" || true
     ;;
 esac
 
