@@ -1,7 +1,7 @@
 # Publish uthini.com to Cloudflare Pages on push to main.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
-#   CLOUDFLARE_API_TOKEN   – API token with "Cloudflare Pages: Edit"
+#   CLOUDFLARE_API_TOKEN   – API token (see README for required permissions)
 #   CLOUDFLARE_ACCOUNT_ID  – Account ID from Workers & Pages sidebar
 
 name: Publish site

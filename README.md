@@ -22,7 +22,19 @@ Every push to `main` runs **Publish site** (`.github/workflows/deploy.yml`). You
 
 **1. Create a Cloudflare API token**
 
-Dashboard → **My Profile** → **API Tokens** → create token with **Cloudflare Pages: Edit**.
+Dashboard → **My Profile** → **API Tokens** → **Create Custom Token**.
+
+The workflow deploys both the **email Worker** and **Pages**, so the token needs these **Account** permissions on your account:
+
+| Permission | Access |
+|------------|--------|
+| Cloudflare Pages | Edit |
+| Workers Scripts | Edit |
+| Workers Services | Edit |
+
+Account resources: **Include → your account** (uthini).
+
+Copy the token once — you will not see it again.
 
 **2. Add GitHub secrets**
 
@@ -43,7 +55,9 @@ The workflow builds `dist/` and deploys to the Cloudflare Pages project `uthini`
 |---------------|-----|
 | Missing secret | Add both `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in GitHub → Settings → Secrets → Actions |
 | Project does not exist | Workflow auto-creates `uthini`; or create manually in Workers & Pages → Create → Pages |
-| Authentication error | Token needs **Account → Cloudflare Pages → Edit**; revoke and create a new token if exposed |
+| Authentication error on **Deploy email worker** | Token missing **Workers Scripts** or **Workers Services → Edit** (Pages-only tokens fail here) |
+| Authentication error on **Publish to Pages** | Token needs **Cloudflare Pages → Edit** |
+| Authentication error (other) | Revoke the old token, create a new one with all three permissions above |
 | Wrong Account ID | Copy from Cloudflare **Workers & Pages** sidebar (32-character hex string) |
 
 Re-run from **Actions → Publish site → Run workflow** after fixing.
