@@ -1,12 +1,16 @@
 /**
  * Contact form handler for Cloudflare Pages Functions.
  *
- * Email via Resend (recommended — https://resend.com/docs/send-with-cloudflare-workers):
- *   RESEND_API_KEY       – from resend.com → API Keys (required for email)
+ * Email via Cloudflare Email Routing (free — no Resend or third parties):
+ *   1. Enable Email Routing on uthini.com
+ *   2. Verify destination addresses (your Gmail inboxes)
+ *   3. Add Send Email binding named EMAIL (Pages → Settings → Bindings)
+ *
+ * Environment variables (Pages → Settings → Variables and Secrets):
  *   CONTACT_TO           – comma-separated recipient addresses (required)
- *   CONTACT_FROM         – sender on verified domain, e.g. noreply@uthini.com (required)
+ *   CONTACT_FROM         – sender on your domain, e.g. noreply@uthini.com (required)
  *   CONTACT_FROM_NAME    – optional display name (default: "Uthini Contact")
- *   TURNSTILE_SECRET_KEY – optional; only if Turnstile widget is enabled on contact.html
+ *   TURNSTILE_SECRET_KEY – optional
  *
  * Setup guide: docs/contact-form-email.md
  */
@@ -142,28 +146,25 @@ async function verifyTurnstile(token, secret, ip) {
   return result.success === true;
 }
 
-async function sendViaResend(apiKey, { from, fromName, to, replyTo, replyName, subject, body }) {
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: `${fromName} <${from}>`,
-      to: to
-        .split(",")
-        .map((addr) => addr.trim())
-        .filter(Boolean),
-      reply_to: `${replyName} <${replyTo}>`,
+async function sendViaCloudflareEmail(emailBinding, { from, fromName, to, replyTo, replyName, subject, body }) {
+  const recipients = to
+    .split(",")
+    .map((addr) => addr.trim())
+    .filter(Boolean);
+
+  try {
+    await emailBinding.send({
+      from: { name: fromName, email: from },
+      to: recipients.length === 1 ? recipients[0] : recipients,
+      replyTo: replyName ? { name: replyName, email: replyTo } : replyTo,
       subject,
       text: body,
-    }),
-  });
-  if (!response.ok) {
-    console.error("[contact-form] Resend error:", response.status, await response.text());
+    });
+    return true;
+  } catch (err) {
+    console.error("[contact-form] Cloudflare Email error:", err);
+    return false;
   }
-  return response.ok;
 }
 
 export async function onRequestGet() {
@@ -199,8 +200,8 @@ export async function onRequestPost(context) {
     return redirectToContact({ thanks: "0", reason: "send" });
   }
 
-  const to = env.CONTACT_TO;
-  const from = env.CONTACT_FROM;
+  const to = String(env.CONTACT_TO || "").trim();
+  const from = String(env.CONTACT_FROM || "").trim();
   const fromName = sanitizeHeaderValue(env.CONTACT_FROM_NAME || "Uthini Contact");
 
   if (!to || !from || !isValidEmail(from)) {
@@ -238,7 +239,7 @@ export async function onRequestPost(context) {
 
   const name = sanitizeHeaderValue(formData.get("name")).slice(0, LIMITS.name);
   const email = sanitize(formData.get("email")).slice(0, LIMITS.email);
-  const subject = sanitizeHeaderValue(formData.get("subject")).slice(0, LIMITS.subject);
+  const subject = sanitize(formData.get("subject")).slice(0, LIMITS.subject);
   const message = sanitize(formData.get("message")).slice(0, LIMITS.message);
 
   if (!name || !email || !message || !isValidEmail(email)) {
@@ -250,10 +251,12 @@ export async function onRequestPost(context) {
 
   let sent = false;
   try {
-    if (!env.RESEND_API_KEY) {
-      console.error("[contact-form] RESEND_API_KEY not set — see docs/contact-form-email.md");
+    if (!env.EMAIL) {
+      console.error(
+        "[contact-form] EMAIL binding missing — enable Email Routing and add Send Email binding in Pages → Settings → Bindings"
+      );
     } else {
-      sent = await sendViaResend(env.RESEND_API_KEY, {
+      sent = await sendViaCloudflareEmail(env.EMAIL, {
         from,
         fromName,
         to,

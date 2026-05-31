@@ -51,26 +51,17 @@ Re-run from **Actions → Publish site → Run workflow** after fixing.
 
 **Alternative:** connect the repo directly in Cloudflare Pages (build command `bash scripts/prepare-deploy.sh`, output `dist`). Use one method, not both.
 
-### Contact form email (Resend — recommended)
+### Contact form email (Cloudflare only — free)
 
 Full guide: **`docs/contact-form-email.md`**
 
-Because `uthini.com` is on Cloudflare, email setup takes about **5 minutes**:
+1. **uthini.com → Email → Email Routing** → Enable  
+2. **Destination addresses** → verify your Gmail inboxes  
+3. **Pages → uthini → Settings → Bindings** → Add **Send Email** → name: `EMAIL`  
+4. Keep env vars: `CONTACT_TO`, `CONTACT_FROM`, `CONTACT_FROM_NAME`  
+5. **Retry deployment**
 
-1. [resend.com](https://resend.com) → **Domains** → add `uthini.com` → **Sign in to Cloudflare** (auto DNS)
-2. **API Keys** → create key → copy `re_…`
-3. Pages → **Settings → Variables and Secrets → Production**:
-
-| Variable | Example | Required |
-|----------|---------|----------|
-| `RESEND_API_KEY` | `re_…` | **Yes** |
-| `CONTACT_TO` | `you@example.com, colleague@example.com` | Yes |
-| `CONTACT_FROM` | `noreply@uthini.com` | Yes (must be on verified domain) |
-| `CONTACT_FROM_NAME` | `Uthini Contact` | No |
-
-4. **Retry deployment**, test the form
-
-Free tier: **3,000 emails/month**. Docs: [Resend + Cloudflare](https://resend.com/docs/knowledge-base/cloudflare)
+No Resend, no Mailchannels, no extra signup.
 
 ### Custom domain
 
@@ -88,10 +79,11 @@ npx wrangler pages dev dist
 Create `.dev.vars` (gitignored) for local form testing:
 
 ```
-RESEND_API_KEY=re_xxxxxxxx
 CONTACT_TO=you@example.com
 CONTACT_FROM=noreply@uthini.com
 ```
+
+Local dev also needs the Send Email binding in `wrangler.toml` and Email Routing enabled on your domain.
 
 ## Branding
 
