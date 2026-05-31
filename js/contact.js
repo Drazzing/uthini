@@ -1,5 +1,5 @@
 /**
- * Contact page: thanks/error states, submit UX, optional Turnstile.
+ * Contact page: thanks/error states and submit UX.
  */
 (function () {
   "use strict";
@@ -38,23 +38,6 @@
 
   if (params.has("thanks") && window.history.replaceState) {
     window.history.replaceState({}, document.title, window.location.pathname);
-  }
-
-  var turnstileMeta = document.querySelector('meta[name="turnstile-site-key"]');
-  var turnstileSiteKey = turnstileMeta && turnstileMeta.getAttribute("content");
-  var turnstileMount = document.getElementById("turnstile-widget");
-
-  if (turnstileSiteKey && turnstileMount) {
-    var turnstileScript = document.createElement("script");
-    turnstileScript.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-    turnstileScript.async = true;
-    turnstileScript.defer = true;
-    document.head.appendChild(turnstileScript);
-
-    var turnstileDiv = document.createElement("div");
-    turnstileDiv.className = "cf-turnstile";
-    turnstileDiv.setAttribute("data-sitekey", turnstileSiteKey);
-    turnstileMount.appendChild(turnstileDiv);
   }
 
   if (formEl && submitBtn) {

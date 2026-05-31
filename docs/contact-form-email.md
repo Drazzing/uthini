@@ -1,48 +1,51 @@
-# Contact form email (Cloudflare only — no Resend)
+# Contact form email (Cloudflare only)
 
-Send form submissions using **Cloudflare Email Routing** — free, no third-party signup.
+Pages **cannot** send email directly. This project uses:
+
+1. **`uthini-contact-email` Worker** — has the `send_email` binding (Workers support this)
+2. **Pages Function** — calls the Worker via `EMAIL_WORKER` service binding in `wrangler.toml`
+
+No Resend. No third parties. All Cloudflare free tier.
 
 Docs: [Send emails from Workers](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
 
 ---
 
-## Step 1 — Enable Email Routing (~2 min)
+## Step 1 — Enable Email Routing
 
-1. Cloudflare dashboard → **uthini.com**
-2. **Email** → **Email Routing** → **Get started** / **Enable**
-3. Cloudflare may add MX records — that's normal (needed for the email product)
-
-You do **not** need custom addresses like `hello@uthini.com` unless you want inbound mail. For the contact form, you only need **verified destination addresses** (step 2).
+1. Cloudflare → **uthini.com** → **Email** → **Email Routing** → **Enable**
 
 ---
 
-## Step 2 — Verify your Gmail inboxes (~2 min)
+## Step 2 — Verify Gmail inboxes
 
-1. **Email Routing** → **Destination addresses** → **Add destination address**
-2. Add `shawn.rosewarne@gmail.com` → verify via the email Cloudflare sends
-3. Repeat for `garyrosewarne8@gmail.com`
+**Email Routing → Destination addresses → Add**
 
-Recipients in `CONTACT_TO` must be verified here.
-
----
-
-## Step 3 — Add Send Email binding (~1 min)
-
-This is the **Bindings** section (not Variables and Secrets):
-
-1. **Workers & Pages** → **uthini** → **Settings**
-2. **Bindings** → **Add** → **Send Email**
-3. **Variable name:** `EMAIL` (must match exactly)
-4. Leave destination unrestricted, or set **Allowed destination addresses** to your Gmail addresses
-5. **Save**
-
-Also in repo: `wrangler.toml` declares the same binding for deploys.
+- `shawn.rosewarne@gmail.com` → verify
+- `garyrosewarne8@gmail.com` → verify
 
 ---
 
-## Step 4 — Environment variables
+## Step 3 — Deploy (automatic via GitHub Actions)
 
-**Settings → Variables and Secrets → Production:**
+Each push to `main` deploys:
+
+1. **`uthini-contact-email`** worker (`workers/contact-email/`)
+2. **Pages site** with service binding to that worker
+
+You do **not** add Bindings in the dashboard — `wrangler.toml` handles it:
+
+```toml
+[[services]]
+binding = "EMAIL_WORKER"
+service = "uthini-contact-email"
+```
+
+---
+
+## Step 4 — Pages environment variables
+
+**Workers & Pages → uthini → Settings → Variables and Secrets → Production**
 
 | Variable | Example |
 |----------|---------|
@@ -50,42 +53,31 @@ Also in repo: `wrangler.toml` declares the same binding for deploys.
 | `CONTACT_FROM` | `noreply@uthini.com` |
 | `CONTACT_FROM_NAME` | `Uthini Contact` |
 
-Remove `RESEND_API_KEY` if you added it — not needed.
-
-`CONTACT_FROM` must use `@uthini.com` (domain with Email Routing enabled).
-
 ---
 
-## Step 5 — Redeploy
-
-**Deployments → latest → Retry deployment**
-
-Or push to `main`.
-
----
-
-## Test
+## Step 5 — Test
 
 1. https://uthini.com/contact.html
 2. Submit the form
-3. Check Gmail inboxes
+3. Check Gmail
 
 ---
 
-## Troubleshooting
-
-**Real-time Logs** (Workers & Pages → uthini → Logs):
+## Troubleshooting (Real-time Logs)
 
 | Log | Fix |
 |-----|-----|
-| `EMAIL binding missing` | Add Send Email binding named `EMAIL` (Step 3) |
-| `Cloudflare Email error` | Destination not verified in Email Routing (Step 2) |
-| `CONTACT_FROM misconfigured` | Use `noreply@uthini.com` format |
+| `EMAIL_WORKER binding missing` | Redeploy — worker must exist before Pages binding works |
+| `email worker error: 500` | Gmail not verified in Email Routing (Step 2) |
+| `send_email` wrangler error on deploy | Should only be in `workers/contact-email/wrangler.toml`, not Pages root |
 
 ---
 
-## What you don't need
+## Why two parts?
 
-- Resend account
-- Mailchannels DNS records
-- Paid Cloudflare plan (Email Routing send from Workers is free)
+| Component | Role |
+|-----------|------|
+| Pages Function | Form validation, spam checks |
+| Email Worker | Actually sends email (Cloudflare limitation) |
+
+This is the standard Cloudflare pattern when using Pages + email.

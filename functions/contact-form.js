@@ -1,16 +1,15 @@
 /**
  * Contact form handler for Cloudflare Pages Functions.
  *
- * Email via Cloudflare Email Routing (free — no Resend or third parties):
- *   1. Enable Email Routing on uthini.com
- *   2. Verify destination addresses (your Gmail inboxes)
- *   3. Add Send Email binding named EMAIL (Pages → Settings → Bindings)
+ * Email via Cloudflare Email Routing (free):
+ *   1. Enable Email Routing on uthini.com + verify destination Gmail addresses
+ *   2. Deploy workers/contact-email (send_email binding — Workers only)
+ *   3. Pages calls it via EMAIL_WORKER service binding in wrangler.toml
  *
  * Environment variables (Pages → Settings → Variables and Secrets):
  *   CONTACT_TO           – comma-separated recipient addresses (required)
  *   CONTACT_FROM         – sender on your domain, e.g. noreply@uthini.com (required)
  *   CONTACT_FROM_NAME    – optional display name (default: "Uthini Contact")
- *   TURNSTILE_SECRET_KEY – optional
  *
  * Setup guide: docs/contact-form-email.md
  */
@@ -18,6 +17,7 @@
 const LIMITS = { name: 200, email: 254, subject: 300, message: 10000 };
 const RATE_LIMIT = { max: 5, windowSeconds: 900 };
 const MAX_BODY_BYTES = 32768;
+const ALLOWED_ORIGINS = ["https://uthini.com", "https://www.uthini.com"];
 
 function redirectToContact(params) {
   const qs = new URLSearchParams(params).toString();
@@ -53,15 +53,6 @@ function isValidEmail(email) {
   return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email);
 }
 
-function parseAllowedOrigins(env) {
-  const defaults = ["https://uthini.com", "https://www.uthini.com"];
-  const custom = (env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return custom.length ? custom : defaults;
-}
-
 function isPagesPreviewHost(hostname) {
   return hostname === "pages.dev" || hostname.endsWith(".pages.dev");
 }
@@ -71,7 +62,7 @@ function isAllowedHost(hostname) {
   return host === "uthini.com" || host === "www.uthini.com" || isPagesPreviewHost(host);
 }
 
-function isAllowedRequest(request, env) {
+function isAllowedRequest(request) {
   const secFetchSite = request.headers.get("Sec-Fetch-Site");
   if (secFetchSite === "same-origin") {
     return true;
@@ -82,12 +73,11 @@ function isAllowedRequest(request, env) {
     return true;
   }
 
-  const allowed = parseAllowedOrigins(env);
   const origin = request.headers.get("Origin");
   const referer = request.headers.get("Referer");
 
   if (origin) {
-    if (allowed.includes(origin)) return true;
+    if (ALLOWED_ORIGINS.includes(origin)) return true;
     try {
       if (isPagesPreviewHost(new URL(origin).hostname)) return true;
     } catch {
@@ -98,7 +88,7 @@ function isAllowedRequest(request, env) {
   if (referer) {
     try {
       const ref = new URL(referer);
-      if (allowed.includes(ref.origin)) return true;
+      if (ALLOWED_ORIGINS.includes(ref.origin)) return true;
       if (ref.protocol === "https:" && isPagesPreviewHost(ref.hostname)) return true;
     } catch {
       return false;
@@ -128,43 +118,20 @@ async function isRateLimited(ip) {
   return false;
 }
 
-async function verifyTurnstile(token, secret, ip) {
-  const body = new URLSearchParams({
-    secret,
-    response: token,
-    remoteip: ip,
-  });
+async function sendViaEmailWorker(worker, { from, fromName, to, replyTo, replyName, subject, body }) {
+  const response = await worker.fetch(
+    new Request("https://email-worker.internal/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from, fromName, to, replyTo, replyName, subject, body }),
+    })
+  );
 
-  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-
-  if (!response.ok) return false;
-  const result = await response.json();
-  return result.success === true;
-}
-
-async function sendViaCloudflareEmail(emailBinding, { from, fromName, to, replyTo, replyName, subject, body }) {
-  const recipients = to
-    .split(",")
-    .map((addr) => addr.trim())
-    .filter(Boolean);
-
-  try {
-    await emailBinding.send({
-      from: { name: fromName, email: from },
-      to: recipients.length === 1 ? recipients[0] : recipients,
-      replyTo: replyName ? { name: replyName, email: replyTo } : replyTo,
-      subject,
-      text: body,
-    });
-    return true;
-  } catch (err) {
-    console.error("[contact-form] Cloudflare Email error:", err);
+  if (!response.ok) {
+    console.error("[contact-form] email worker error:", response.status, await response.text());
     return false;
   }
+  return true;
 }
 
 export async function onRequestGet() {
@@ -177,7 +144,7 @@ export async function onRequestGet() {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  if (!isAllowedRequest(request, env)) {
+  if (!isAllowedRequest(request)) {
     return rejectValidation("origin");
   }
 
@@ -229,14 +196,6 @@ export async function onRequestPost(context) {
     return rejectValidation("honeypot");
   }
 
-  if (env.TURNSTILE_SECRET_KEY) {
-    const token = String(formData.get("cf-turnstile-response") ?? "");
-    const valid = token && (await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, ip));
-    if (!valid) {
-      return rejectValidation("turnstile");
-    }
-  }
-
   const name = sanitizeHeaderValue(formData.get("name")).slice(0, LIMITS.name);
   const email = sanitize(formData.get("email")).slice(0, LIMITS.email);
   const subject = sanitize(formData.get("subject")).slice(0, LIMITS.subject);
@@ -251,12 +210,12 @@ export async function onRequestPost(context) {
 
   let sent = false;
   try {
-    if (!env.EMAIL) {
+    if (!env.EMAIL_WORKER) {
       console.error(
-        "[contact-form] EMAIL binding missing — enable Email Routing and add Send Email binding in Pages → Settings → Bindings"
+        "[contact-form] EMAIL_WORKER binding missing — deploy uthini-contact-email worker (see workers/contact-email/)"
       );
     } else {
-      sent = await sendViaCloudflareEmail(env.EMAIL, {
+      sent = await sendViaEmailWorker(env.EMAIL_WORKER, {
         from,
         fromName,
         to,

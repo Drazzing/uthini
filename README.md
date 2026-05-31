@@ -14,8 +14,7 @@ Static site for uthini.com. Hosted on **Cloudflare Pages** (free tier): HTML, CS
 | `robots.txt`, `sitemap.xml` | SEO |
 | `_redirects`, `_headers` | Cloudflare routing and security headers |
 | `scripts/prepare-deploy.sh` | Builds `dist/` for publish |
-| `branding/` | Source logo files (not published) |
-| `docs/` | Migration notes |
+| `docs/` | Migration and email setup notes |
 
 ## Publish (GitHub Actions)
 
@@ -55,13 +54,11 @@ Re-run from **Actions → Publish site → Run workflow** after fixing.
 
 Full guide: **`docs/contact-form-email.md`**
 
-1. **uthini.com → Email → Email Routing** → Enable  
-2. **Destination addresses** → verify your Gmail inboxes  
-3. **Pages → uthini → Settings → Bindings** → Add **Send Email** → name: `EMAIL`  
-4. Keep env vars: `CONTACT_TO`, `CONTACT_FROM`, `CONTACT_FROM_NAME`  
-5. **Retry deployment**
+1. **uthini.com → Email → Email Routing** → Enable + verify Gmail destinations  
+2. Push to `main` — deploys email Worker + Pages site automatically  
+3. Env vars: `CONTACT_TO`, `CONTACT_FROM`, `CONTACT_FROM_NAME`
 
-No Resend, no Mailchannels, no extra signup.
+No Resend. No dashboard Bindings setup — configured in `wrangler.toml`.
 
 ### Custom domain
 
@@ -83,12 +80,11 @@ CONTACT_TO=you@example.com
 CONTACT_FROM=noreply@uthini.com
 ```
 
-Local dev also needs the Send Email binding in `wrangler.toml` and Email Routing enabled on your domain.
+Local dev also needs the `EMAIL_WORKER` service binding in `wrangler.toml` and Email Routing enabled on your domain.
 
 ## Branding
 
 - Live logo: **`images/logo.svg`**
-- Source files: **`branding/`** — copy finals into `images/`
 - Colours/fonts: **`css/variables.css`**
 - Social image: **`images/og-image.png`** (1200×630)
 
@@ -116,15 +112,7 @@ Set in `_headers` and enforced on function responses via `functions/_middleware.
 | Header injection guard | Sanitizes name/subject used in email headers |
 | Length limits | Enforced client- and server-side |
 | Rate limiting | 5 POSTs per 15 min per IP |
-| Honeypot fields | Hidden `website` and `url` trap bots |
-| Timing check | Rejects submissions faster than 3 s or older than 1 h |
-| Optional Turnstile | Set site key in `contact.html` meta + `TURNSTILE_SECRET_KEY` env |
-
-### Enable Turnstile (recommended)
-
-1. Cloudflare dashboard → **Turnstile** → Add widget for `uthini.com`
-2. In `contact.html`, set `<meta name="turnstile-site-key" content="YOUR_SITE_KEY">`
-3. In Pages env vars, set `TURNSTILE_SECRET_KEY`
+| Honeypot fields | Hidden `_gotcha` and `_fax` trap bots |
 
 ### Cloudflare dashboard settings
 

@@ -2,6 +2,7 @@ name = "uthini"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "."
 
-# Send Email binding — also confirm in Pages → Settings → Bindings
-[[send_email]]
-name = "EMAIL"
+# Pages cannot use send_email — call the email Worker instead
+[[services]]
+binding = "EMAIL_WORKER"
+service = "uthini-contact-email"

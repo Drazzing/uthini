@@ -95,35 +95,22 @@
 ;   functions/contact-form.js
 ;
 ; NOT in repo / not published:
-;   branding/  (source assets only)
+;   .cursor/  (editor config)
 ;
 ; =============================================================================
-; STEP 4 — ADD THESE DNS RECORDS MANUALLY (contact form email)
+; STEP 4 — CONTACT FORM EMAIL (Cloudflare Email Routing)
 ; =============================================================================
 ;
-; Replace YOUR_CLOUDFLARE_ACCOUNT_ID with:
-;   Dashboard → Workers & Pages → right sidebar → Account ID
+; No Mailchannels DNS records. No Resend API key.
+; Full setup: docs/contact-form-email.md
 ;
-; Type   Name            Content                                      Proxy
-; ----   ----            -------                                      -----
-; TXT    _mailchannels   v=mc1 cf_id=YOUR_CLOUDFLARE_ACCOUNT_ID        DNS only
-; TXT    @               v=spf1 include:relay.mailchannels.net ~all   DNS only
-;
-; =============================================================================
-; STEP 5 — PAGES ENVIRONMENT VARIABLES
-; =============================================================================
-;
-; Pages project → Settings → Environment variables → Production:
-;
-;   CONTACT_TO          shawn.rosewarne@gmail.com, garyrosewarne8@gmail.com
-;   CONTACT_FROM        noreply@uthini.com
-;   CONTACT_FROM_NAME   Uthini Contact
-;
-; Optional (alternative to Mailchannels):
-;   RESEND_API_KEY      re_xxxxxxxx  (from resend.com — verify domain first)
+; 1. Email → Email Routing → Enable on uthini.com
+; 2. Verify destination Gmail addresses
+; 3. GitHub Actions deploys uthini-contact-email worker + Pages (see deploy.yml)
+; 4. Pages env vars: CONTACT_TO, CONTACT_FROM, CONTACT_FROM_NAME
 ;
 ; =============================================================================
-; STEP 6 — GITHUB ACTIONS (optional, if not using Pages Git integration)
+; STEP 5 — GITHUB ACTIONS (if not using Pages Git integration)
 ; =============================================================================
 ;
 ; GitHub repo → Settings → Secrets → Actions:
@@ -133,7 +120,7 @@
 ; Push to main triggers .github/workflows/deploy.yml
 ;
 ; =============================================================================
-; STEP 7 — VERIFY AFTER GO-LIVE
+; STEP 6 — VERIFY AFTER GO-LIVE
 ; =============================================================================
 ;
 ; [ ] https://uthini.com loads
@@ -162,11 +149,7 @@ $ORIGIN uthini.com.
 ; --- Auto-added by Cloudflare Pages (do not create manually) ---
 ; @       CNAME   uthini.pages.dev.          ; Proxied — created by Pages
 ; www     CNAME   uthini.pages.dev.          ; Proxied — created by Pages
-
-; --- Add manually for contact form ---
-@               3600    IN      TXT     "v=spf1 include:relay.mailchannels.net ~all"
-_mailchannels   3600    IN      TXT     "v=mc1 cf_id=YOUR_CLOUDFLARE_ACCOUNT_ID"
-
+;
 ; --- Nameservers (managed at registrar, not as DNS records) ---
 ; glen.ns.cloudflare.com
 ; priscilla.ns.cloudflare.com
