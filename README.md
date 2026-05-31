@@ -51,25 +51,26 @@ Re-run from **Actions → Publish site → Run workflow** after fixing.
 
 **Alternative:** connect the repo directly in Cloudflare Pages (build command `bash scripts/prepare-deploy.sh`, output `dist`). Use one method, not both.
 
-### Contact form environment variables
+### Contact form email (Resend — recommended)
 
-Pages project → **Settings → Environment variables** (Production):
+Full guide: **`docs/contact-form-email.md`**
+
+Because `uthini.com` is on Cloudflare, email setup takes about **5 minutes**:
+
+1. [resend.com](https://resend.com) → **Domains** → add `uthini.com` → **Sign in to Cloudflare** (auto DNS)
+2. **API Keys** → create key → copy `re_…`
+3. Pages → **Settings → Variables and Secrets → Production**:
 
 | Variable | Example | Required |
 |----------|---------|----------|
+| `RESEND_API_KEY` | `re_…` | **Yes** |
 | `CONTACT_TO` | `you@example.com, colleague@example.com` | Yes |
-| `CONTACT_FROM` | `noreply@uthini.com` | Yes |
+| `CONTACT_FROM` | `noreply@uthini.com` | Yes (must be on verified domain) |
 | `CONTACT_FROM_NAME` | `Uthini Contact` | No |
-| `RESEND_API_KEY` | `re_…` | No |
 
-#### Email DNS (Mailchannels — free default)
+4. **Retry deployment**, test the form
 
-| Type | Name | Content |
-|------|------|---------|
-| TXT | `_mailchannels` | `v=mc1 cf_id=<YOUR_CLOUDFLARE_ACCOUNT_ID>` |
-| TXT | `@` | `v=spf1 include:relay.mailchannels.net ~all` |
-
-Or use [Resend](https://resend.com) and set `RESEND_API_KEY` instead.
+Free tier: **3,000 emails/month**. Docs: [Resend + Cloudflare](https://resend.com/docs/knowledge-base/cloudflare)
 
 ### Custom domain
 
@@ -87,6 +88,7 @@ npx wrangler pages dev dist
 Create `.dev.vars` (gitignored) for local form testing:
 
 ```
+RESEND_API_KEY=re_xxxxxxxx
 CONTACT_TO=you@example.com
 CONTACT_FROM=noreply@uthini.com
 ```

@@ -1,19 +1,18 @@
 /**
  * Contact form handler for Cloudflare Pages Functions.
  *
- * Environment variables (Cloudflare Pages → Settings → Environment variables):
- *   CONTACT_TO             – comma-separated recipient addresses (required)
- *   CONTACT_FROM           – sender on your domain, e.g. noreply@uthini.com (required)
- *   CONTACT_FROM_NAME      – optional display name (default: "Uthini Contact")
- *   ALLOWED_ORIGINS        – optional comma-separated origins (default: uthini.com + www)
- *   RESEND_API_KEY         – optional; sends via Resend instead of Mailchannels
- *   TURNSTILE_SECRET_KEY   – optional; only set if Turnstile widget is enabled on contact.html
+ * Email via Resend (recommended — https://resend.com/docs/send-with-cloudflare-workers):
+ *   RESEND_API_KEY       – from resend.com → API Keys (required for email)
+ *   CONTACT_TO           – comma-separated recipient addresses (required)
+ *   CONTACT_FROM         – sender on verified domain, e.g. noreply@uthini.com (required)
+ *   CONTACT_FROM_NAME    – optional display name (default: "Uthini Contact")
+ *   TURNSTILE_SECRET_KEY – optional; only if Turnstile widget is enabled on contact.html
+ *
+ * Setup guide: docs/contact-form-email.md
  */
 
 const LIMITS = { name: 200, email: 254, subject: 300, message: 10000 };
 const RATE_LIMIT = { max: 5, windowSeconds: 900 };
-const MIN_SUBMIT_MS = 800;
-const MAX_SUBMIT_MS = 3600000;
 const MAX_BODY_BYTES = 32768;
 
 function redirectToContact(params) {
@@ -167,39 +166,6 @@ async function sendViaResend(apiKey, { from, fromName, to, replyTo, replyName, s
   return response.ok;
 }
 
-async function sendViaMailchannels({ from, fromName, to, replyTo, replyName, subject, body }) {
-  const recipients = to
-    .split(",")
-    .map((addr) => addr.trim())
-    .filter(Boolean)
-    .map((email) => ({ email }));
-
-  const response = await fetch("https://api.mailchannels.net/tx/v1/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      personalizations: [{ to: recipients }],
-      from: { email: from, name: fromName },
-      reply_to: { email: replyTo, name: replyName },
-      subject,
-      content: [{ type: "text/plain", value: body }],
-    }),
-  });
-  if (!response.ok) {
-    console.error("[contact-form] Mailchannels error:", response.status, await response.text());
-  }
-  return response.ok;
-}
-
-function isValidSubmissionTiming(rawTs) {
-  const ts = parseInt(String(rawTs ?? ""), 10);
-  if (!Number.isFinite(ts) || ts <= 0) {
-    return false;
-  }
-  const elapsed = Date.now() - ts;
-  return elapsed >= MIN_SUBMIT_MS && elapsed <= MAX_SUBMIT_MS;
-}
-
 export async function onRequestGet() {
   return new Response(null, {
     status: 302,
@@ -262,10 +228,6 @@ export async function onRequestPost(context) {
     return rejectValidation("honeypot");
   }
 
-  if (!isValidSubmissionTiming(formData.get("_ts"))) {
-    return rejectValidation("timing", "timing");
-  }
-
   if (env.TURNSTILE_SECRET_KEY) {
     const token = String(formData.get("cf-turnstile-response") ?? "");
     const valid = token && (await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, ip));
@@ -288,18 +250,10 @@ export async function onRequestPost(context) {
 
   let sent = false;
   try {
-    if (env.RESEND_API_KEY) {
-      sent = await sendViaResend(env.RESEND_API_KEY, {
-        from,
-        fromName,
-        to,
-        replyTo: email,
-        replyName: name,
-        subject: subjectLine,
-        body,
-      });
+    if (!env.RESEND_API_KEY) {
+      console.error("[contact-form] RESEND_API_KEY not set — see docs/contact-form-email.md");
     } else {
-      sent = await sendViaMailchannels({
+      sent = await sendViaResend(env.RESEND_API_KEY, {
         from,
         fromName,
         to,
