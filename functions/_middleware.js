@@ -1,4 +1,4 @@
-/** Security headers for all Pages Function responses (including redirects). */
+/** Security headers for function responses — CSP must match _headers */
 const SECURITY_HEADERS = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
   "X-Frame-Options": "DENY",

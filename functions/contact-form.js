@@ -1,23 +1,14 @@
 /**
- * Contact form handler for Cloudflare Pages Functions.
- *
- * Email via Cloudflare Email Routing (free):
- *   1. Enable Email Routing on uthini.com + verify destination Gmail addresses
- *   2. Deploy workers/contact-email (send_email binding — Workers only)
- *   3. Pages calls it via EMAIL_WORKER service binding in wrangler.toml
- *
- * Environment variables (Pages → Settings → Variables and Secrets):
- *   CONTACT_TO           – comma-separated recipient addresses (required)
- *   CONTACT_FROM         – sender on your domain, e.g. noreply@uthini.com (required)
- *   CONTACT_FROM_NAME    – optional display name (default: "Uthini Contact")
- *
- * Setup guide: docs/contact-form-email.md
+ * Contact form — Pages Function. Email via EMAIL_WORKER → uthini-contact-email.
+ * Setup: docs/contact-form-email.md
+ * Env: CONTACT_TO, CONTACT_FROM, CONTACT_FROM_NAME
  */
 
 const LIMITS = { name: 200, email: 254, subject: 300, message: 10000 };
 const RATE_LIMIT = { max: 5, windowSeconds: 900 };
 const MAX_BODY_BYTES = 32768;
-const ALLOWED_ORIGINS = ["https://uthini.com", "https://www.uthini.com"];
+const SITE_ORIGINS = new Set(["https://uthini.com", "https://www.uthini.com"]);
+const SITE_HOSTS = new Set(["uthini.com", "www.uthini.com"]);
 
 function redirectToContact(params) {
   const qs = new URLSearchParams(params).toString();
@@ -53,45 +44,29 @@ function isValidEmail(email) {
   return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email);
 }
 
-function isPagesPreviewHost(hostname) {
+function isPreviewHost(hostname) {
   return hostname === "pages.dev" || hostname.endsWith(".pages.dev");
 }
 
-function isAllowedHost(hostname) {
-  const host = hostname.toLowerCase();
-  return host === "uthini.com" || host === "www.uthini.com" || isPagesPreviewHost(host);
-}
-
 function isAllowedRequest(request) {
-  const secFetchSite = request.headers.get("Sec-Fetch-Site");
-  if (secFetchSite === "same-origin") {
+  if (request.headers.get("Sec-Fetch-Site") === "same-origin") {
     return true;
   }
 
-  const host = (request.headers.get("Host") || "").split(":")[0];
-  if (isAllowedHost(host) && secFetchSite !== "cross-site") {
+  const host = (request.headers.get("Host") || "").split(":")[0].toLowerCase();
+  if (SITE_HOSTS.has(host) && request.headers.get("Sec-Fetch-Site") !== "cross-site") {
     return true;
   }
 
-  const origin = request.headers.get("Origin");
-  const referer = request.headers.get("Referer");
-
-  if (origin) {
-    if (ALLOWED_ORIGINS.includes(origin)) return true;
+  for (const header of ["Origin", "Referer"]) {
+    const value = request.headers.get(header);
+    if (!value) continue;
     try {
-      if (isPagesPreviewHost(new URL(origin).hostname)) return true;
+      const url = new URL(value);
+      if (SITE_ORIGINS.has(url.origin)) return true;
+      if (url.protocol === "https:" && isPreviewHost(url.hostname)) return true;
     } catch {
-      /* ignore invalid origin */
-    }
-  }
-
-  if (referer) {
-    try {
-      const ref = new URL(referer);
-      if (ALLOWED_ORIGINS.includes(ref.origin)) return true;
-      if (ref.protocol === "https:" && isPagesPreviewHost(ref.hostname)) return true;
-    } catch {
-      return false;
+      if (header === "Referer") return false;
     }
   }
 
@@ -118,20 +93,18 @@ async function isRateLimited(ip) {
   return false;
 }
 
-async function sendViaEmailWorker(worker, { from, fromName, to, replyTo, replyName, subject, body }) {
+async function sendEmail(worker, payload) {
   const response = await worker.fetch(
     new Request("https://email-worker.internal/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ from, fromName, to, replyTo, replyName, subject, body }),
+      body: JSON.stringify(payload),
     })
   );
-
   if (!response.ok) {
-    console.error("[contact-form] email worker error:", response.status, await response.text());
-    return false;
+    console.error("[contact-form] email worker:", response.status, await response.text());
   }
-  return true;
+  return response.ok;
 }
 
 export async function onRequestGet() {
@@ -209,13 +182,11 @@ export async function onRequestPost(context) {
   const body = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
 
   let sent = false;
-  try {
-    if (!env.EMAIL_WORKER) {
-      console.error(
-        "[contact-form] EMAIL_WORKER binding missing — deploy uthini-contact-email worker (see workers/contact-email/)"
-      );
-    } else {
-      sent = await sendViaEmailWorker(env.EMAIL_WORKER, {
+  if (!env.EMAIL_WORKER) {
+    console.error("[contact-form] EMAIL_WORKER binding missing");
+  } else {
+    try {
+      sent = await sendEmail(env.EMAIL_WORKER, {
         from,
         fromName,
         to,
@@ -224,10 +195,9 @@ export async function onRequestPost(context) {
         subject: subjectLine,
         body,
       });
+    } catch (err) {
+      console.error("[contact-form] send failed:", err);
     }
-  } catch (err) {
-    console.error("[contact-form] send failed:", err);
-    sent = false;
   }
 
   if (sent) {

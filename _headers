@@ -1,3 +1,4 @@
+# CSP must match functions/_middleware.js
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Frame-Options: DENY

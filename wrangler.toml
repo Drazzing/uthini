@@ -1,6 +1,6 @@
 name = "uthini"
 compatibility_date = "2024-11-01"
-pages_build_output_dir = "."
+pages_build_output_dir = "dist"
 
 # Pages cannot use send_email — call the email Worker instead
 [[services]]

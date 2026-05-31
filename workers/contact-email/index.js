@@ -1,7 +1,4 @@
-/**
- * Sends contact form email via Cloudflare Email Routing.
- * Called from Pages Functions through a service binding (not public HTTP).
- */
+/** Sends contact form email via Cloudflare Email Service (send_email binding). */
 export default {
   async fetch(request, env) {
     if (request.method !== "POST") {

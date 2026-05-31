@@ -97,18 +97,8 @@
 ; NOT in repo / not published:
 ;   .cursor/  (editor config)
 ;
-; =============================================================================
-; STEP 4 — CONTACT FORM EMAIL (Cloudflare Email Routing)
-; =============================================================================
-;
-; No Mailchannels DNS records. No Resend API key.
-; Full setup: docs/contact-form-email.md
-;
-; 1. Email → Email Routing → Enable on uthini.com
-; 2. Verify destination Gmail addresses
-; 3. GitHub Actions deploys uthini-contact-email worker + Pages (see deploy.yml)
-; 4. Pages env vars: CONTACT_TO, CONTACT_FROM, CONTACT_FROM_NAME
-;
+; STEP 4 — CONTACT FORM EMAIL
+; See docs/contact-form-email.md (Email Sending + Pages env vars)
 ; =============================================================================
 ; STEP 5 — GITHUB ACTIONS (if not using Pages Git integration)
 ; =============================================================================

@@ -8,10 +8,33 @@ DIST="$ROOT/dist"
 rm -rf "$DIST"
 mkdir -p "$DIST/functions"
 
-cp -r "$ROOT/css" "$ROOT/js" "$ROOT/images" "$DIST/"
-cp "$ROOT/functions/"*.js "$DIST/functions/"
-cp "$ROOT/_redirects" "$ROOT/_headers" "$DIST/"
-cp "$ROOT"/*.html "$ROOT/robots.txt" "$ROOT/sitemap.xml" "$DIST/"
+for dir in css js images; do
+  if [ ! -d "$ROOT/$dir" ]; then
+    echo "::error::Missing required directory: $dir"
+    exit 1
+  fi
+  cp -r "$ROOT/$dir" "$DIST/"
+done
 
-echo "Deploy folder ready: $DIST"
-find "$DIST" -type f | sort
+if ! compgen -G "$ROOT/functions/"*.js > /dev/null; then
+  echo "::error::No Pages Functions found in functions/"
+  exit 1
+fi
+cp "$ROOT/functions/"*.js "$DIST/functions/"
+
+for file in _redirects _headers robots.txt sitemap.xml; do
+  if [ ! -f "$ROOT/$file" ]; then
+    echo "::error::Missing required file: $file"
+    exit 1
+  fi
+  cp "$ROOT/$file" "$DIST/"
+done
+
+if ! compgen -G "$ROOT/"*.html > /dev/null; then
+  echo "::error::No HTML pages found"
+  exit 1
+fi
+cp "$ROOT"/*.html "$DIST/"
+
+file_count="$(find "$DIST" -type f | wc -l | tr -d ' ')"
+echo "Deploy folder ready: $DIST ($file_count files)"
