@@ -58,16 +58,18 @@
         <p id="contact-intro" class="section__lead">Share the product, workflow, or software challenge you want to move forward. We will come back with a practical next step.</p>
       </div>
 
-      <div id="form-thanks" class="form-thanks" hidden>
-        <p class="form-thanks__message">Thanks for getting in touch. We'll respond shortly.</p>
+      <div id="form-thanks" class="contact-success section--card" hidden>
+        <h2 class="contact-success__title">Thanks for getting in touch</h2>
+        <p class="contact-success__message">We have received your message and will respond shortly.</p>
+        <a href="index.html" class="cta">Back to home</a>
       </div>
 
-      <div id="form-error" class="form-thanks form-thanks--error" hidden role="alert">
-        <p id="form-error-msg" class="form-thanks__message">Something went wrong. Please check the required fields and try again, or email us directly.</p>
-      </div>
-
-      <div class="contact-layout">
+      <div id="contact-layout" class="contact-layout">
         <div class="contact-card section--card">
+          <div id="form-error" class="form-thanks form-thanks--error" hidden role="alert">
+            <p id="form-error-msg" class="form-thanks__message">Something went wrong. Please check the required fields and try again, or email us directly.</p>
+          </div>
+
           <form id="contact-form" class="contact-form" action="/contact-form" method="post" novalidate>
             <!-- Honeypot: hidden from users; must stay empty -->
             <div class="honeypot" hidden aria-hidden="true">
@@ -103,7 +105,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label for="contact-enquiry">Topic</label>
+                <label for="contact-enquiry">Enquiry type</label>
                 <div class="form-select">
                   <select id="contact-enquiry" name="enquiry">
                     <option value="">General enquiry</option>
@@ -169,7 +171,7 @@
             <p><strong>Enquiries:</strong> Balgowlah, NSW, Sydney</p>
           </div>
 
-          <a id="contact-back-link" href="index.html" class="cta cta--secondary">Back to home</a>
+          <a id="contact-back-link" href="index.html" class="cta cta--secondary contact-sidebar__back">Back to home</a>
         </aside>
       </div>
     </section>

@@ -8,18 +8,19 @@
   var thanksEl = document.getElementById("form-thanks");
   var errorEl = document.getElementById("form-error");
   var formEl = document.getElementById("contact-form");
-  var metaEl = document.querySelector(".section__meta");
-  var introEl = document.getElementById("contact-intro");
+  var heroEl = document.querySelector(".contact-hero");
+  var layoutEl = document.getElementById("contact-layout");
+  var pageEl = document.querySelector(".contact-page");
   var submitBtn = document.getElementById("contact-submit-btn");
   var submitText = submitBtn && submitBtn.querySelector(".cta__text");
   var submitSpinner = submitBtn && submitBtn.querySelector(".cta__spinner");
 
   if (params.get("thanks") === "1") {
+    if (pageEl) pageEl.classList.add("is-success");
     if (thanksEl) thanksEl.hidden = false;
     if (errorEl) errorEl.hidden = true;
-    if (formEl) formEl.hidden = true;
-    if (metaEl) metaEl.hidden = true;
-    if (introEl) introEl.hidden = true;
+    if (heroEl) heroEl.hidden = true;
+    if (layoutEl) layoutEl.hidden = true;
   } else if (params.get("thanks") === "0") {
     if (errorEl) errorEl.hidden = false;
     if (thanksEl) thanksEl.hidden = true;

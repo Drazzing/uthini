@@ -705,7 +705,35 @@ main > section.section:first-child {
   margin-bottom: 0;
 }
 .form-thanks {
-  max-width: 32rem;
+  max-width: none;
+  margin-bottom: var(--space-lg);
+}
+.form-thanks--error {
+  padding: var(--space-md) var(--space-lg);
+  background: rgba(133, 3, 176, 0.06);
+  border: 1px solid rgba(133, 3, 176, 0.15);
+  border-radius: 0.375rem;
+}
+.contact-success {
+  max-width: 36rem;
+  padding: var(--space-2xl);
+  text-align: center;
+}
+.contact-success__title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 var(--space-md);
+  color: var(--color-primary);
+}
+.contact-success__message {
+  font-size: 1.125rem;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-xl);
+  line-height: 1.6;
+}
+.contact-page.is-success {
+  max-width: 36rem;
 }
 .form-thanks--error .form-thanks__message {
   color: var(--color-primary);
