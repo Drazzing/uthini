@@ -735,6 +735,13 @@ main > section.section:first-child {
 .contact-page.is-success {
   max-width: 36rem;
 }
+.contact-page.is-success .contact-hero,
+.contact-page.is-success .contact-layout {
+  display: none;
+}
+.contact-page.is-success .contact-success {
+  display: block;
+}
 .form-thanks--error .form-thanks__message {
   color: var(--color-primary);
 }

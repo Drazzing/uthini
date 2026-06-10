@@ -32,15 +32,21 @@
   selectIfValid(enquiryEl, enquiry);
   selectIfValid(contactPrefEl, contactPref);
 
+  function setHidden(el, isHidden) {
+    if (!el) return;
+    el.hidden = isHidden;
+    el.style.display = isHidden ? "none" : "";
+  }
+
   if (params.get("thanks") === "1") {
     if (pageEl) pageEl.classList.add("is-success");
-    if (thanksEl) thanksEl.hidden = false;
-    if (errorEl) errorEl.hidden = true;
-    if (heroEl) heroEl.hidden = true;
-    if (layoutEl) layoutEl.hidden = true;
+    setHidden(thanksEl, false);
+    setHidden(errorEl, true);
+    setHidden(heroEl, true);
+    setHidden(layoutEl, true);
   } else if (params.get("thanks") === "0") {
-    if (errorEl) errorEl.hidden = false;
-    if (thanksEl) thanksEl.hidden = true;
+    setHidden(errorEl, false);
+    setHidden(thanksEl, true);
     var reason = params.get("reason");
     var msgEl = document.getElementById("form-error-msg");
     if (msgEl && reason === "send") {
@@ -53,10 +59,6 @@
       msgEl.textContent =
         "Please check the required fields (name, email, message) and try again.";
     }
-  }
-
-  if (params.has("thanks") && window.history.replaceState) {
-    window.history.replaceState({}, document.title, window.location.pathname);
   }
 
   if (formEl && submitBtn) {
