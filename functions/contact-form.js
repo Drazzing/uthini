@@ -12,10 +12,12 @@ const LIMITS = {
   company: 200,
   phone: 30,
 };
-const ENQUIRY_VALUES = new Set(["", "general", "consulting", "development", "design", "software", "ai"]);
+const ENQUIRY_VALUES = new Set(["", "general", "founder", "venture", "consulting", "development", "design", "software", "ai"]);
 const CONTACT_PREF_VALUES = new Set(["", "email", "phone", "either"]);
 const ENQUIRY_LABELS = {
   general: "General enquiry",
+  founder: "Founder partnership",
+  venture: "Venture building",
   consulting: "Consulting",
   development: "Development",
   design: "Design",

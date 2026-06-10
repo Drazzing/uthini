@@ -1020,9 +1020,27 @@ main > section.section:first-child {
 }
 .hero .hero__title,
 .hero .hero__subtitle,
-.hero .cta {
+.hero .hero__tagline,
+.hero .cta,
+.hero .hero__actions {
   position: relative;
   z-index: 1;
+}
+.hero__tagline {
+  margin: 0 0 var(--space-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-highlight-alt);
+  animation: heroFadeIn 0.7s var(--ease-out) 0.15s both;
+}
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: center;
+  animation: heroFadeIn 0.7s var(--ease-out) 0.55s both;
 }
 .hero .hero__title {
   animation: heroFadeIn 0.7s var(--ease-out) 0.35s both;

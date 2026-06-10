@@ -11,9 +11,26 @@
   var heroEl = document.querySelector(".contact-hero");
   var layoutEl = document.getElementById("contact-layout");
   var pageEl = document.querySelector(".contact-page");
+  var enquiryEl = document.getElementById("contact-enquiry");
+  var contactPrefEl = document.getElementById("contact-pref");
   var submitBtn = document.getElementById("contact-submit-btn");
   var submitText = submitBtn && submitBtn.querySelector(".cta__text");
   var submitSpinner = submitBtn && submitBtn.querySelector(".cta__spinner");
+  var enquiry = params.get("enquiry");
+  var contactPref = params.get("contact_pref");
+
+  function selectIfValid(selectEl, value) {
+    if (!selectEl || !value) return;
+    for (var i = 0; i < selectEl.options.length; i += 1) {
+      if (selectEl.options[i].value === value) {
+        selectEl.value = value;
+        return;
+      }
+    }
+  }
+
+  selectIfValid(enquiryEl, enquiry);
+  selectIfValid(contactPrefEl, contactPref);
 
   if (params.get("thanks") === "1") {
     if (pageEl) pageEl.classList.add("is-success");
